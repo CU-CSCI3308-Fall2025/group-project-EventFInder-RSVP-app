@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Event RSVP</title>
+</head>
+<body>
+  <h1>RSVP for the Event</h1>
+  <p>Please fill out the form below to let us know if you can attend.</p>
+
+  <form>
+    <label for="name">Full Name:</label><br>
+    <input type="text" id="name" name="name" required><br><br>
+
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" name="email" required><br><br>
+
+    <label>Will you attend?</label><br>
+    <input type="radio" id="yes" name="attend" value="yes" required>
+    <label for="yes">Yes</label><br>
+    <input type="radio" id="no" name="attend" value="no">
+    <label for="no">No</label><br><br>
+
+    <label for="guests">Number of Guests:</label><br>
+    <input type="number" id="guests" name="guests" min="1" max="10"><br><br>
+
+    <label for="notes">Notes or Comments:</label><br>
+    <textarea id="notes" name="notes" rows="4" cols="40"></textarea><br><br>
+
+    <input type="submit" value="Submit RSVP">
+  </form>
+</body>
+</html>
