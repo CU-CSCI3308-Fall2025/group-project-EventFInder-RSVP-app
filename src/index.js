@@ -2,6 +2,8 @@
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
 
+require("dotenv").config(); // Load environment variables from .env file
+
 const express = require("express"); // To build an application server or API
 const app = express();
 const handlebars = require("express-handlebars");
@@ -70,6 +72,29 @@ app.use(
     extended: true,
   }),
 );
+
+app.get("/feed", async (req, res) => {
+  // TODO handle authentication
+  const { includeApi, includeLocal } = req.query;
+
+  const result = [];
+  if (includeApi) {
+    // Make api call later
+  }
+  if (includeLocal ?? true) {
+    try {
+      const events = await db.any("SELECT * FROM custom_events");
+      result.push(...events);
+    } catch (e) {
+      console.log("ERROR:", e.message || e);
+      // TODO make error page
+      res.status(500).send("Internal Server Error");
+    }
+  }
+
+  console.log("Events:", result);
+  return res.render("pages/feed.hbs", { events: result });
+});
 
 app.listen(3000);
 console.log("Server is listening on port 3000");
