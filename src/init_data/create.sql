@@ -3,8 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS custom_events (
@@ -14,7 +13,137 @@ CREATE TABLE IF NOT EXISTS custom_events (
     location VARCHAR(255) NOT NULL,
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
-    organizer_id INTEGER REFERENCES users(id),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    organizer_id INTEGER REFERENCES users(id) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+INSERT INTO users (name, email, password) VALUES
+('John Doe', 'john.doe@example.com', '$2a$10$YourHashedPasswordHere1'),
+('Jane Smith', 'jane.smith@example.com', '$2a$10$YourHashedPasswordHere2'),
+('Mike Johnson', 'mike.johnson@example.com', '$2a$10$YourHashedPasswordHere3'),
+('Sarah Williams', 'sarah.williams@example.com', '$2a$10$YourHashedPasswordHere4'),
+('Emily Brown', 'emily.brown@example.com', '$2a$10$YourHashedPasswordHere5')
+ON CONFLICT (email) DO NOTHING;
+
+-- Insert sample events
+INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id) VALUES
+(
+    'Tech Conference 2024',
+    'Join us for the biggest tech conference of the year! Featuring keynote speakers from leading tech companies, workshops on cutting-edge technologies, and networking opportunities with industry professionals.',
+    'Convention Center, Downtown',
+    '2024-06-15 09:00:00',
+    '2024-06-15 18:00:00',
+    1
+),
+(
+    'Summer Music Festival',
+    'Experience an unforgettable outdoor music festival featuring local and international artists across multiple genres. Food trucks, art installations, and family-friendly activities available.',
+    'Central Park Amphitheater',
+    '2024-07-20 14:00:00',
+    '2024-07-20 23:00:00',
+    2
+),
+(
+    'Startup Pitch Night',
+    'Watch innovative startups pitch their ideas to a panel of experienced investors. Network with entrepreneurs, investors, and fellow innovators. Open bar and appetizers provided.',
+    'Innovation Hub, 5th Floor',
+    '2024-05-10 18:30:00',
+    '2024-05-10 21:30:00',
+    1
+),
+(
+    'Community Food Drive',
+    'Help us make a difference in our community! Volunteer to sort and pack food donations for local families in need. All ages welcome. Light refreshments provided.',
+    'Community Center, Main Street',
+    '2024-05-25 10:00:00',
+    '2024-05-25 15:00:00',
+    3
+),
+(
+    'Photography Workshop',
+    'Learn professional photography techniques from award-winning photographer. Covers composition, lighting, and post-processing. Bring your camera (DSLR or mirrorless recommended).',
+    'Art Studio Gallery, West End',
+    '2024-06-05 13:00:00',
+    '2024-06-05 17:00:00',
+    4
+),
+(
+    'Marathon Training Kickoff',
+    'Join our marathon training group for the first session! All fitness levels welcome. Professional trainers will assess your current level and help create a personalized training plan.',
+    'City Sports Complex',
+    '2024-05-18 07:00:00',
+    '2024-05-18 09:00:00',
+    2
+),
+(
+    'Book Club Meeting: Sci-Fi Edition',
+    'Monthly book club discussion focusing on science fiction classics and contemporary works. This month: "The Three-Body Problem". Coffee and snacks provided.',
+    'Downtown Library, Reading Room',
+    '2024-05-28 19:00:00',
+    '2024-05-28 21:00:00',
+    5
+),
+(
+    'Coding Bootcamp Open House',
+    'Explore our intensive 12-week coding bootcamp. Meet instructors, tour facilities, and learn about curriculum. Free coding challenge for attendees with prizes!',
+    'Tech Education Center',
+    '2024-06-01 10:00:00',
+    '2024-06-01 14:00:00',
+    1
+),
+(
+    'Farmers Market Opening Day',
+    'Celebrate the opening of our seasonal farmers market! Fresh produce, handmade crafts, live music, and cooking demonstrations. Family-friendly event.',
+    'Town Square',
+    '2024-05-22 08:00:00',
+    '2024-05-22 13:00:00',
+    3
+),
+(
+    'Virtual Reality Gaming Tournament',
+    'Compete in the ultimate VR gaming tournament! Multiple game categories, prizes for winners, and the latest VR equipment available to try. Registration required.',
+    'GameZone Arena',
+    '2024-06-08 15:00:00',
+    '2024-06-08 22:00:00',
+    4
+),
+(
+    'Yoga in the Park',
+    'Free outdoor yoga session suitable for all levels. Bring your own mat and water. Enjoy the peaceful morning atmosphere and connect with nature.',
+    'Riverside Park, East Pavilion',
+    '2024-05-20 08:00:00',
+    '2024-05-20 09:30:00',
+    2
+),
+(
+    'Career Fair 2024',
+    'Meet with representatives from over 50 companies hiring in technology, healthcare, finance, and more. Bring copies of your resume and dress professionally.',
+    'University Conference Hall',
+    '2024-06-12 11:00:00',
+    '2024-06-12 16:00:00',
+    1
+),
+(
+    'Wine Tasting Evening',
+    'Sample exquisite wines from around the world guided by our expert sommelier. Paired with artisanal cheeses and gourmet appetizers. 21+ event.',
+    'Vineyard Restaurant & Bar',
+    '2024-06-18 19:00:00',
+    '2024-06-18 22:00:00',
+    5
+),
+(
+    'Kids Science Fair',
+    'Young scientists showcase their innovative projects! Interactive demonstrations, hands-on activities, and awards ceremony. Great family event.',
+    'Elementary School Gymnasium',
+    '2024-05-30 14:00:00',
+    '2024-05-30 17:00:00',
+    3
+),
+(
+    'Jazz Night at the Lounge',
+    'Enjoy smooth jazz performed by talented local musicians in an intimate setting. Full dinner and cocktail menu available. Reservations recommended.',
+    'Blue Note Lounge',
+    '2024-06-22 20:00:00',
+    '2024-06-22 23:30:00',
+    4
 );
