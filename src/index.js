@@ -76,5 +76,61 @@ app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
 });
 
+app.post("/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    if (
+      !name ||
+      !email ||
+      !password ||
+      email.length < 1 ||
+      password.length < 1 ||
+      name.length < 1
+    ) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Email and password are required" });
+    }
+    // check regex for email
+    if (!email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Invalid email address" });
+    }
+
+    // check password length
+    if (password.length < 8) {
+      return res.status(400).json({
+        status: "error",
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    // check if email already exists in database
+    const user = await db.oneOrNone("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
+    if (user) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "Email already exists" });
+    }
+
+    // hash password with bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // create new user in database with hashed password
+    await db.none(
+      "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
+      [name, email, hashedPassword],
+    );
+    res.status(201).json({ status: "success", message: "User created" });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+});
+
 module.exports = app.listen(3000);
 console.log("Server is listening on port 3000");
