@@ -1,0 +1,49 @@
+Meeting Notes For Oct 29
+Robert:
+	Planning to work on:
+		Login and Register page
+Alex:
+	Work done:
+		Refined Case diagram
+	Planning to work on:
+		RSVP page
+Joshua:
+	Planning to work on:
+		profile page
+Abhiram:
+	Planning to work on:
+		Feed Page
+Blockers:
+	None
+-----------------------------
+Meeting Notes For Nov 5
+Robert:
+	Work done:
+		Worked on login and register page in the frontend HTML
+		Made the base HTML structure
+		Included all the fields for required input
+	Planning to work on:
+		Finish up frontend
+		Move into backend to complete login and register page
+Alex:
+	Work done:
+		Worked on RSVP page
+		Created barebones HTML structure
+	Planning to work on:
+		Backend functionality
+		Connect buttons to backend
+		Add extra functionality
+Joshua:
+	Work done:
+		Finished frontend for profile page
+	Planning to work on:
+		Queries and backend for profile page
+Abhiram:
+	Work done:
+		Created the frontend for the feed page
+		Connected it to the backend with a simple query (no filters yet)
+	Planning to work on:
+		Add filter functionality
+		Add authentication
+Blockers:
+	None
