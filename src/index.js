@@ -2,6 +2,8 @@
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
 
+require("dotenv").config(); // Load environment variables from .env file
+
 const express = require("express"); // To build an application server or API
 const app = express();
 const handlebars = require("express-handlebars");
@@ -70,6 +72,9 @@ app.use(
     extended: true,
   }),
 );
+app.get("/welcome", (req, res) => {
+  res.json({ status: "success", message: "Welcome!" });
+});
 
-app.listen(3000);
+module.exports = app.listen(3000);
 console.log("Server is listening on port 3000");
