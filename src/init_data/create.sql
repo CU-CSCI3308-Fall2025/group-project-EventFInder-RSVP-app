@@ -6,12 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS user_rsvp (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) NOT NULL,
-    event_id INTEGER REFERENCES custom_events(id) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+
 
 CREATE TABLE IF NOT EXISTS custom_events (
     id SERIAL PRIMARY KEY,
@@ -21,6 +16,13 @@ CREATE TABLE IF NOT EXISTS custom_events (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     organizer_id INTEGER REFERENCES users(id) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_rsvp (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) NOT NULL,
+    event_id INTEGER REFERENCES custom_events(id) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

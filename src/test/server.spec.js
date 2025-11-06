@@ -27,6 +27,99 @@ describe("Server!", () => {
   });
 });
 
-// *********************** TODO: WRITE 2 UNIT TESTCASES **************************
+// *********************** REGISTER ENDPOINT TESTCASES **************************
+
+describe("Register User", () => {
+  // Positive test case - successful registration
+  it("Positive: /register - Should register a new user successfully", (done) => {
+    const timestamp = Date.now();
+    chai
+      .request(server)
+      .post("/register")
+      .send({
+        name: "Test User",
+        email: `testuser${timestamp}@example.com`,
+        password: "password123",
+      })
+      .end((err, res) => {
+        expect(res).to.have.status(201);
+        expect(res.body.status).to.equals("success");
+        expect(res.body.message).to.equals("User created");
+        done();
+      });
+  });
+
+  // Negative test case 1 - missing name
+  it("Negative: /register - Should fail when name is missing", (done) => {
+    chai
+      .request(server)
+      .post("/register")
+      .send({
+        email: "test@example.com",
+        password: "password123",
+      })
+      .end((err, res) => {
+        expect(res).to.have.status(400);
+        expect(res.body.status).to.equals("error");
+        expect(res.body.message).to.equals("Email and password are required");
+        done();
+      });
+  });
+
+  // Negative test case 2 - invalid email format
+  it("Negative: /register - Should fail with invalid email format", (done) => {
+    chai
+      .request(server)
+      .post("/register")
+      .send({
+        name: "Test User",
+        email: "invalid-email",
+        password: "password123",
+      })
+      .end((err, res) => {
+        expect(res).to.have.status(400);
+        expect(res.body.status).to.equals("error");
+        expect(res.body.message).to.equals("Invalid email address");
+        done();
+      });
+  });
+
+  // Negative test case 3 - password too short
+  it("Negative: /register - Should fail when password is too short", (done) => {
+    chai
+      .request(server)
+      .post("/register")
+      .send({
+        name: "Test User",
+        email: "test@example.com",
+        password: "short",
+      })
+      .end((err, res) => {
+        expect(res).to.have.status(400);
+        expect(res.body.status).to.equals("error");
+        expect(res.body.message).to.equals(
+          "Password must be at least 8 characters long",
+        );
+        done();
+      });
+  });
+
+  // Additional negative test case - missing email
+  it("Negative: /register - Should fail when email is missing", (done) => {
+    chai
+      .request(server)
+      .post("/register")
+      .send({
+        name: "Test User",
+        password: "password123",
+      })
+      .end((err, res) => {
+        expect(res).to.have.status(400);
+        expect(res.body.status).to.equals("error");
+        expect(res.body.message).to.equals("Email and password are required");
+        done();
+      });
+  });
+});
 
 // ********************************************************************************
