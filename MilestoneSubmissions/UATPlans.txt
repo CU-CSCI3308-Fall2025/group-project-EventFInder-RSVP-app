@@ -1,0 +1,18 @@
+Users can see the list of events to RSVP for
+- A user can’t see this list without being registered and logged in
+- The events are fetched from Ticketmaster API and from the table custom_events in the database.
+
+Users can RSVP for events
+- A user cannot RSVP for an event unless they are properly registered and logged in. 
+- A user cannot RSVP for the same event more than once.
+- The information for the RSVP will be saved in the user_rsvp table in the main database.
+
+Users can create events
+- A user cannot create an event unless they are properly registered and logged in.
+- A user cannot submit the create event form unless all mandatory fields are filled out. Mandatory fields include:
+    - Event name
+    - Event description
+    - Event location
+    - Event start time
+    - Event end time
+- The information for each event that is created will be stored in the custom_events table in the main database.
