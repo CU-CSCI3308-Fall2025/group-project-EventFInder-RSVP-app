@@ -4,6 +4,41 @@
   <meta charset="utf-8">
   <title>Event RSVP</title>
   <script src = "https://cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fafafa;
+      padding: 20px;
+    }
+    #rsvp-container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    form label {
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    input[type="submit"] {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    input[type="submit"]:hover {
+      background-color: #0056b3;
+    }
+  </style>
 </head>
 <body>
   <div id="rsvp-container"></div>
@@ -32,8 +67,25 @@
   <script>
     const source = document.getElementById("rsvp-template").innerHTML;
     const template = Handlebars.compile(source);
-    const context = {}; // empty because we just want static HTML for now
+    //placeholder data
+    const context = {
+      eventName: "Annual Company Picnic",
+      eventDate: "June 14, 2026",
+      eventLocation: "City Park, Denver"
+    };
     document.getElementById("rsvp-container").innerHTML = template(context);
+    document.addEventListener("submit", function(event) {
+      event.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const guests = document.getElementById("guests").value || 1;
+      container.innerHTML = `
+        <div class="confirmation">
+          <h2>✅ Thank you, ${name}!</h2>
+          <p>Your RSVP for ${guests} guest(s) has been received.</p>
+          <p>We look forward to seeing you on ${context.eventDate} at ${context.eventLocation}!</p>
+        </div>
+      `;
+    });
   </script>
 </body>
 </html>
