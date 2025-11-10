@@ -72,9 +72,31 @@ app.use(
     extended: true,
   }),
 );
+app.get("/", (req, res) => {
+  return res.render('', { layout: 'main' });
+});
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
 });
+app.get("/rsvp", async (req, res) => {
+  try {
+    // Fetch event info from API 
+    //const response = await fetch("http://localhost:3000/api/events/1");/ex route
+    //const eventData = await response.json();
+    /*return res.render("pages/RSVP", {
+      eventName: eventData.event_name,
+      eventDate: eventData.event_date,
+      eventLocation: eventData.event_location,
+    });
+    */
+   //test data
+   return res.render("pages/RSVP", {eventName: "Annual Company Picnic", eventDate: "June 14, 2026", eventLocation: "City Park, Denver"})
+  } catch (err) {
+    console.error("Error fetching event data:", err);
+    return res.status(500).send("Error loading event details");
+  }
+});
+
 
 app.get("/feed", async (req, res) => {
   // TODO handle authentication
