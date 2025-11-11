@@ -158,7 +158,11 @@ app.post("/register", async (req, res) => {
 });
 
 app.get("/feed", async (req, res) => {
-  // TODO handle authentication
+  // Check for authentication
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
   const { includeApi, includeLocal } = req.query;
 
   const result = [];
