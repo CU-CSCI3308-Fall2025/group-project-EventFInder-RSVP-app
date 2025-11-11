@@ -163,15 +163,107 @@ app.get("/feed", async (req, res) => {
     return res.redirect("/login");
   }
 
-  const { includeApi, includeLocal } = req.query;
+  const { includeApi, includeLocal, searchQuery } = req.query;
+
+  // Determine what to include based on parameters
+  const shouldIncludeApi =
+    includeApi === "true" && searchQuery && searchQuery.trim().length > 0;
+  const shouldIncludeLocal =
+    includeLocal === "true" || (!includeApi && !searchQuery);
 
   const result = [];
-  if (includeApi ?? false) {
-    // Make api call later
-  }
-  if (includeLocal ?? true) {
+  if (shouldIncludeApi) {
     try {
-      const events = await db.any("SELECT * FROM custom_events");
+      const response = await axios({
+        url: `https://app.ticketmaster.com/discovery/v2/events.json`,
+        method: "GET",
+        dataType: "json",
+        headers: {
+          "Accept-Encoding": "application/json",
+        },
+        params: {
+          apikey: process.env.API_KEY,
+          keyword: searchQuery.trim(),
+          size: 10, // Number of events to return
+        },
+      });
+
+      // Check if we have events
+      const apiEvents = response.data._embedded
+        ? response.data._embedded.events
+        : [];
+
+      // Transform API events to match our database schema
+      const transformedEvents = apiEvents.map((event) => {
+        // Extract venue information
+        const venue = event._embedded?.venues?.[0];
+        const location = venue
+          ? `${venue.name}, ${venue.city?.name || ""}, ${venue.state?.stateCode || venue.country?.countryCode || ""}`
+              .replace(/,\s*,/g, ",")
+              .replace(/,\s*$/, "")
+          : "Location TBA";
+
+        // Create description from available info
+        let description = event.info || event.pleaseNote || "";
+        if (!description && event.classifications?.[0]) {
+          const classification = event.classifications[0];
+          description = `${classification.segment?.name || "Event"} - ${classification.genre?.name || ""}`;
+        }
+        if (!description) {
+          description = "No description available";
+        }
+
+        // Parse start time
+        const startTime = event.dates?.start?.dateTime
+          ? new Date(event.dates.start.dateTime).toISOString()
+          : new Date().toISOString();
+
+        // Estimate end time (add 3 hours if not provided)
+        let endTime;
+        if (event.dates?.end?.dateTime) {
+          endTime = new Date(event.dates.end.dateTime).toISOString();
+        } else {
+          const startDate = new Date(startTime);
+          startDate.setHours(startDate.getHours() + 3);
+          endTime = startDate.toISOString();
+        }
+
+        return {
+          id: `api_${event.id}`, // Prefix to distinguish from DB events
+          title: event.name || "Untitled Event",
+          description: description.substring(0, 500), // Limit description length
+          location: location,
+          start_time: startTime,
+          end_time: endTime,
+          organizer_id: null, // API events don't have local organizers
+          created_at: new Date().toISOString(),
+          source: "ticketmaster",
+          external_url: event.url || "",
+          external_id: event.id,
+        };
+      });
+
+      result.push(...transformedEvents);
+    } catch (error) {
+      console.error("Ticketmaster API Error:", error.message);
+      // Continue with local events even if API fails
+    }
+  }
+  if (shouldIncludeLocal) {
+    try {
+      let query = "SELECT * FROM custom_events";
+      let params = [];
+
+      // Add search functionality for local events
+      if (searchQuery && searchQuery.trim().length > 0) {
+        query +=
+          " WHERE title ILIKE $1 OR description ILIKE $1 OR location ILIKE $1";
+        params.push(`%${searchQuery.trim()}%`);
+      }
+
+      query += " ORDER BY start_time ASC";
+
+      const events = await db.any(query, params);
       result.push(...events);
     } catch (e) {
       console.log("ERROR:", e.message || e);
@@ -181,7 +273,12 @@ app.get("/feed", async (req, res) => {
   }
 
   console.log("Events:", result);
-  return res.render("pages/feed.hbs", { events: result });
+  return res.render("pages/feed.hbs", {
+    events: result,
+    searchQuery: searchQuery || "",
+    includeApi: shouldIncludeApi,
+    includeLocal: shouldIncludeLocal,
+  });
 });
 
 module.exports = app.listen(3000);
