@@ -162,7 +162,7 @@ app.get("/feed", async (req, res) => {
   const { includeApi, includeLocal } = req.query;
 
   const result = [];
-  if (includeApi) {
+  if (includeApi ?? false) {
     // Make api call later
   }
   if (includeLocal ?? true) {
@@ -180,5 +180,4 @@ app.get("/feed", async (req, res) => {
   return res.render("pages/feed.hbs", { events: result });
 });
 
-app.listen(3000);
-console.log("Server is listening on port 3000");
+module.exports = app.listen(3000);
