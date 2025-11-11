@@ -72,7 +72,11 @@ app.use(
     extended: true,
   }),
 );
+app.get("/welcome", (req, res) => {
+  res.json({ status: "success", message: "Welcome!" });
+});
 
+<<<<<<< HEAD
 app.get("/feed", async (req, res) => {
   // TODO handle authentication
   const { includeApi, includeLocal } = req.query;
@@ -97,4 +101,7 @@ app.get("/feed", async (req, res) => {
 });
 
 app.listen(3000);
+=======
+module.exports = app.listen(3000);
+>>>>>>> 288e9c0 (Added base test case)
 console.log("Server is listening on port 3000");
