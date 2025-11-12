@@ -6,10 +6,17 @@
         <div class="card-body">
             <form action="/feed" method="GET">
                 <div class="row align-items-end">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label for="searchQuery" class="form-label">Search Events</label>
                         <input type="text" class="form-control" id="searchQuery" name="searchQuery"
                                value="{{searchQuery}}" placeholder="Enter keywords to search...">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="sortBy" class="form-label">Sort By</label>
+                        <select class="form-select" id="sortBy" name="sortBy">
+                            <option value="date" {{#if (eq sortBy 'date')}}selected{{/if}}>Date</option>
+                            <option value="name" {{#if (eq sortBy 'name')}}selected{{/if}}>Name</option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Event Sources</label>
@@ -71,3 +78,10 @@
         {{/each}}
     </div>
 </div>
+
+<script>
+    // Auto-submit form when sort option changes
+    document.getElementById('sortBy').addEventListener('change', function() {
+        this.form.submit();
+    });
+</script>

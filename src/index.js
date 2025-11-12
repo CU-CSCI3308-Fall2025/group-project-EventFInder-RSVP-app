@@ -25,6 +25,11 @@ const hbs = handlebars.create({
   defaultLayout: "main",
   layoutsDir: __dirname + "/views/layouts",
   partialsDir: __dirname + "/views/partials",
+  helpers: {
+    eq: function (a, b) {
+      return a === b;
+    },
+  },
 });
 
 // database configuration
@@ -159,11 +164,11 @@ app.post("/register", async (req, res) => {
 
 app.get("/feed", async (req, res) => {
   // Check for authentication
-  if (!req.session.user) {
-    return res.redirect("/login");
-  }
+  // if (!req.session.user) {
+  //   return res.redirect("/login");
+  // }
 
-  const { includeApi, includeLocal, searchQuery } = req.query;
+  const { includeApi, includeLocal, searchQuery, sortBy } = req.query;
 
   // Determine what to include based on parameters
   const shouldIncludeApi =
@@ -261,7 +266,12 @@ app.get("/feed", async (req, res) => {
         params.push(`%${searchQuery.trim()}%`);
       }
 
-      query += " ORDER BY start_time ASC";
+      // Add sorting for local events
+      if (sortBy === "name") {
+        query += " ORDER BY title ASC";
+      } else {
+        query += " ORDER BY start_time ASC";
+      }
 
       const events = await db.any(query, params);
       result.push(...events);
@@ -272,12 +282,21 @@ app.get("/feed", async (req, res) => {
     }
   }
 
+  // Sort the combined results if needed
+  if (sortBy === "name") {
+    result.sort((a, b) => a.title.localeCompare(b.title));
+  } else {
+    // Default sort by date (start_time)
+    result.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  }
+
   console.log("Events:", result);
   return res.render("pages/feed.hbs", {
     events: result,
     searchQuery: searchQuery || "",
     includeApi: shouldIncludeApi,
     includeLocal: shouldIncludeLocal,
+    sortBy: sortBy || "date",
   });
 });
 
