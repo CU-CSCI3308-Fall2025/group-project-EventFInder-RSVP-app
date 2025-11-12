@@ -72,6 +72,9 @@ app.use(
     extended: true,
   }),
 );
+
+app.use("/pages", express.static(path.join(__dirname, "views/pages")));
+
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
 });
@@ -129,6 +132,32 @@ app.post("/register", async (req, res) => {
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ status: "error", message: "Internal server error" });
+  }
+});
+
+
+app.get("/api/me", async (req, res) => {
+  try {
+    // Check that the user is logged in
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not logged in" });
+    }
+
+    // Query only the username for this user
+    const user = await db.oneOrNone(
+      "SELECT username FROM users WHERE id = $1",
+      [req.session.userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return just the username as JSON
+    res.json({ username: user.username });
+  } catch (err) {
+    console.error("GET /api/me error:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

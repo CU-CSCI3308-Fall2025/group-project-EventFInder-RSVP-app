@@ -55,23 +55,18 @@
     </div>
   </div>
 
-
-  app.get("/api/me", async (req, res) => {
-  if (!req.userId) return res.status(401).json({ error: "unauthorized" });
-
-  const sql = `
-    SELECT id, username, email, full_name, avatar_url, created_at
-    FROM users
-    WHERE id = $1
-  `;
-  const { rows } = await pool.query(sql, [req.userId]);
-  if (!rows.length) return res.status(404).json({ error: "not found" });
-  res.json(rows[0]);
-  });
+  
 
   <!-- Bootstrap JS Bundle -->
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
   ></script>
+  <script>
+    fetch("/api/me", { credentials: "include" })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("username").textContent = data.username || "Guest";
+  });
+  </script>
 </body>
 </html>
