@@ -4,6 +4,8 @@
 import sqlite3 from "sqlite3";
 require("dotenv").config(); // Load environment variables from .env file
 
+require("dotenv").config(); // Load environment variables from .env file
+
 const express = require("express"); // To build an application server or API
 const app = express();
 const handlebars = require("express-handlebars");
@@ -25,6 +27,11 @@ const hbs = handlebars.create({
   defaultLayout: "main",
   layoutsDir: __dirname + "/views/layouts",
   partialsDir: __dirname + "/views/partials",
+  helpers: {
+    eq: function (a, b) {
+      return a === b;
+    },
+  },
 });
 
 // database configuration
@@ -73,7 +80,7 @@ app.use(
   }),
 );
 app.get("/", (req, res) => {
-  return res.render('', { layout: 'main' });
+  return res.render("", { layout: "main" });
 });
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
@@ -176,6 +183,146 @@ app.post("/login", async (req, res) => {
     });
   }
 });
+
+
+app.get("/feed", async (req, res) => {
+  // Check for authentication
+  // if (!req.session.user) {
+  //   return res.redirect("/login");
+  // }
+
+  const { includeApi, includeLocal, searchQuery, sortBy } = req.query;
+
+  // Determine what to include based on parameters
+  const shouldIncludeApi =
+    includeApi === "true" && searchQuery && searchQuery.trim().length > 0;
+  const shouldIncludeLocal =
+    includeLocal === "true" || (!includeApi && !searchQuery);
+
+  const result = [];
+  if (shouldIncludeApi) {
+    try {
+      const response = await axios({
+        url: `https://app.ticketmaster.com/discovery/v2/events.json`,
+        method: "GET",
+        dataType: "json",
+        headers: {
+          "Accept-Encoding": "application/json",
+        },
+        params: {
+          apikey: process.env.API_KEY,
+          keyword: searchQuery.trim(),
+          size: 10, // Number of events to return
+        },
+      });
+
+      // Check if we have events
+      const apiEvents = response.data._embedded
+        ? response.data._embedded.events
+        : [];
+
+      // Transform API events to match our database schema
+      const transformedEvents = apiEvents.map((event) => {
+        // Extract venue information
+        const venue = event._embedded?.venues?.[0];
+        const location = venue
+          ? `${venue.name}, ${venue.city?.name || ""}, ${venue.state?.stateCode || venue.country?.countryCode || ""}`
+              .replace(/,\s*,/g, ",")
+              .replace(/,\s*$/, "")
+          : "Location TBA";
+
+        // Create description from available info
+        let description = event.info || event.pleaseNote || "";
+        if (!description && event.classifications?.[0]) {
+          const classification = event.classifications[0];
+          description = `${classification.segment?.name || "Event"} - ${classification.genre?.name || ""}`;
+        }
+        if (!description) {
+          description = "No description available";
+        }
+
+        // Parse start time
+        const startTime = event.dates?.start?.dateTime
+          ? new Date(event.dates.start.dateTime).toISOString()
+          : new Date().toISOString();
+
+        // Estimate end time (add 3 hours if not provided)
+        let endTime;
+        if (event.dates?.end?.dateTime) {
+          endTime = new Date(event.dates.end.dateTime).toISOString();
+        } else {
+          const startDate = new Date(startTime);
+          startDate.setHours(startDate.getHours() + 3);
+          endTime = startDate.toISOString();
+        }
+
+        return {
+          id: `api_${event.id}`, // Prefix to distinguish from DB events
+          title: event.name || "Untitled Event",
+          description: description.substring(0, 500), // Limit description length
+          location: location,
+          start_time: startTime,
+          end_time: endTime,
+          organizer_id: null, // API events don't have local organizers
+          created_at: new Date().toISOString(),
+          source: "ticketmaster",
+          external_url: event.url || "",
+          external_id: event.id,
+        };
+      });
+
+      result.push(...transformedEvents);
+    } catch (error) {
+      console.error("Ticketmaster API Error:", error.message);
+      // Continue with local events even if API fails
+    }
+  }
+  if (shouldIncludeLocal) {
+    try {
+      let query = "SELECT * FROM custom_events";
+      let params = [];
+
+      // Add search functionality for local events
+      if (searchQuery && searchQuery.trim().length > 0) {
+        query +=
+          " WHERE title ILIKE $1 OR description ILIKE $1 OR location ILIKE $1";
+        params.push(`%${searchQuery.trim()}%`);
+      }
+
+      // Add sorting for local events
+      if (sortBy === "name") {
+        query += " ORDER BY title ASC";
+      } else {
+        query += " ORDER BY start_time ASC";
+      }
+
+      const events = await db.any(query, params);
+      result.push(...events);
+    } catch (e) {
+      console.log("ERROR:", e.message || e);
+      // TODO make error page
+      res.status(500).send("Internal Server Error");
+    }
+  }
+
+  // Sort the combined results if needed
+  if (sortBy === "name") {
+    result.sort((a, b) => a.title.localeCompare(b.title));
+  } else {
+    // Default sort by date (start_time)
+    result.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+  }
+
+  console.log("Events:", result);
+  return res.render("pages/feed.hbs", {
+    events: result,
+    searchQuery: searchQuery || "",
+    includeApi: shouldIncludeApi,
+    includeLocal: shouldIncludeLocal,
+    sortBy: sortBy || "date",
+  });
+});
+
 
 
 module.exports = app.listen(3000);
