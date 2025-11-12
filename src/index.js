@@ -1,7 +1,7 @@
 // *****************************************************
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
-
+import sqlite3 from "sqlite3";
 require("dotenv").config(); // Load environment variables from .env file
 
 const express = require("express"); // To build an application server or API
@@ -94,6 +94,24 @@ app.get("/rsvp", async (req, res) => {
   } catch (err) {
     console.error("Error fetching event data:", err);
     return res.status(500).send("Error loading event details");
+  }
+});
+
+app.post("/api/rsvp", async (req, res) => {
+  try {
+    const { name, email, guests, notes } = req.body;
+
+    // Insert into your RSVP table (create it if it doesn’t exist)
+    await db.none(
+      `INSERT INTO rsvps (name, email, guests, notes)
+       VALUES ($1, $2, $3, $4)`,
+      [name, email, guests, notes]
+    );
+
+    res.json({ message: "RSVP saved successfully" });
+  } catch (error) {
+    console.error("Error saving RSVP:", error);
+    res.status(500).json({ message: "Database error" });
   }
 });
 
