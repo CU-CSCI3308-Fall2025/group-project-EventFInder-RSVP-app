@@ -48,7 +48,7 @@
     <p>Location: {{eventLocation}}</p>
     <p>Please fill out the form below to let us know if you can attend.</p>
 
-    <form>
+    <form id="rsvp-form" method="POST" action="/api/rsvp">
       <label for="name">Full Name:</label><br>
       <input type="text" id="name" name="name" required><br><br>
 
@@ -65,26 +65,33 @@
     </form>
   </script>
   <script>
-    const source = document.getElementById("rsvp-template").innerHTML;
-    const template = Handlebars.compile(source);
-    //placeholder data
-    const context = {
-      eventName: "Annual Company Picnic",
-      eventDate: "June 14, 2026",
-      eventLocation: "City Park, Denver"
-    };
-    document.getElementById("rsvp-container").innerHTML = template(context);
-    document.addEventListener("submit", function(event) {
+    document.getElementById("rsvp-form").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const name = document.getElementById("name").value.trim();
-      const guests = document.getElementById("guests").value || 1;
-      container.innerHTML = `
-        <div class="confirmation">
-          <h2>✅ Thank you, ${name}!</h2>
-          <p>Your RSVP for ${guests} guest(s) has been received.</p>
-          <p>We look forward to seeing you on ${context.eventDate} at ${context.eventLocation}!</p>
-        </div>
-      `;
+
+      const formData = {
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        guests: document.getElementById("guests").value || 1,
+        notes: document.getElementById("notes").value.trim()
+      };
+
+      try {
+        const response = await fetch("/api/rsvp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+          document.getElementById("rsvp-form").style.display = "none";
+          document.getElementById("confirmation").style.display = "block";
+        } else {
+          alert("❌ There was an error submitting your RSVP. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error submitting RSVP:", error);
+        alert("❌ A network error occurred.");
+      }
     });
   </script>
 </body>

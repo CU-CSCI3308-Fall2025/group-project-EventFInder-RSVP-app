@@ -1,6 +1,8 @@
 // *****************************************************
 // <!-- Section 1 : Import Dependencies -->
 // *****************************************************
+import sqlite3 from "sqlite3";
+require("dotenv").config(); // Load environment variables from .env file
 
 require("dotenv").config(); // Load environment variables from .env file
 
@@ -85,82 +87,103 @@ app.get("/welcome", (req, res) => {
 });
 app.get("/rsvp", async (req, res) => {
   try {
-    // Fetch event info from API
-    //const response = await fetch("http://localhost:3000/api/events/1");/ex route
-    //const eventData = await response.json();
-    /*return res.render("pages/RSVP", {
-      eventName: eventData.event_name,
-      eventDate: eventData.event_date,
-      eventLocation: eventData.event_location,
-    });
-    */
-    //test data
-    return res.render("pages/RSVP", {
-      eventName: "Annual Company Picnic",
-      eventDate: "June 14, 2026",
-      eventLocation: "City Park, Denver",
-    });
+    const { eventName, eventDate, eventLocation } = req.query;
+    const context = {
+      //use defaults if no data passed through
+      eventName: eventName || "Default Event",
+      eventDate: eventDate || "Default Date",
+      eventLocation: eventLocation || "Default Location"
+    };
+    return res.render("pages/RSVP", context);
   } catch (err) {
-    console.error("Error fetching event data:", err);
+    console.error("Error loading event details:", err);
     return res.status(500).send("Error loading event details");
   }
 });
 
+app.post("/api/rsvp", async (req, res) => {
+  try {
+    const { name, email, guests, notes } = req.body;
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS rsvps (
+        rsvp_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        guests INTEGER DEFAULT 1 CHECK (guests > 0),
+        notes TEXT,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await db.none(
+      `INSERT INTO rsvps (name, email, guests, notes)
+       VALUES ($1, $2, $3, $4);`,
+      [name, email, guests, notes]
+    );
+    res.json({ message: "✅ RSVP saved successfully" });
+  } catch (error) {
+    console.error("❌ Error saving RSVP:", error);
+    res.status(500).json({ message: "Database error", error: error.message });
+  }
+});
+
+
+/// GET /register
+app.get("/register", (req, res) => {
+  res.render("pages/Register", { title: "Register" });
+});
+
+// POST /register
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (
-      !name ||
-      !email ||
-      !password ||
-      email.length < 1 ||
-      password.length < 1 ||
-      name.length < 1
-    ) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Email and password are required" });
-    }
-    // check regex for email
-    if (!email.match(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Invalid email address" });
-    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.none("INSERT INTO users (name, email, password) VALUES ($1, $2, $3)", [
+      name,
+      email,
+      hashedPassword,
+    ]);
+    res.redirect("/login");
+  } catch (err) {
+    console.error("Registration error:", err);
+    res.render("pages/Register", {
+      title: "Register",
+      message: "Registration failed. Try a different email.",
+      error: true,
+    });
+  }
+});
 
-    // check password length
-    if (password.length < 8) {
-      return res.status(400).json({
-        status: "error",
-        message: "Password must be at least 8 characters long",
+// GET /login
+app.get("/login", (req, res) => {
+  res.render("pages/Login", { title: "Login" });
+});
+
+// POST /login
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await db.oneOrNone("SELECT * FROM users WHERE email = $1", [email]);
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.render("pages/Login", {
+        title: "Login",
+        message: "Invalid email or password.",
+        error: true,
       });
     }
 
-    // check if email already exists in database
-    const user = await db.oneOrNone("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
-    if (user) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Email already exists" });
-    }
-
-    // hash password with bcrypt
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // create new user in database with hashed password
-    await db.none(
-      "INSERT INTO users (name, email, password) VALUES ($1, $2, $3)",
-      [name, email, hashedPassword],
-    );
-    res.status(201).json({ status: "success", message: "User created" });
-  } catch (error) {
-    console.error("Registration error:", error);
-    res.status(500).json({ status: "error", message: "Internal server error" });
+    req.session.user = { id: user.id, name: user.name, email: user.email };
+    res.redirect("/profile");
+  } catch (err) {
+    console.error("Login error:", err);
+    res.render("pages/Login", {
+      title: "Login",
+      message: "An error occurred during login.",
+      error: true,
+    });
   }
 });
+
 
 app.get("/feed", async (req, res) => {
   // Check for authentication
@@ -300,4 +323,7 @@ app.get("/feed", async (req, res) => {
   });
 });
 
+
+
 module.exports = app.listen(3000);
+console.log("Server is listening on port 3000");
