@@ -1,0 +1,3 @@
+-Added Routes for Register/Login page
+-Finalized register/log in html structure, need to convert to hbs but ran into problems
+-Adjusted references so you can access log in from register
