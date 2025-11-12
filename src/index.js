@@ -80,19 +80,16 @@ app.get("/welcome", (req, res) => {
 });
 app.get("/rsvp", async (req, res) => {
   try {
-    // Fetch event info from API 
-    //const response = await fetch("http://localhost:3000/api/events/1");/ex route
-    //const eventData = await response.json();
-    /*return res.render("pages/RSVP", {
-      eventName: eventData.event_name,
-      eventDate: eventData.event_date,
-      eventLocation: eventData.event_location,
-    });
-    */
-   //test data
-   return res.render("pages/RSVP", {eventName: "Annual Company Picnic", eventDate: "June 14, 2026", eventLocation: "City Park, Denver"})
+    const { eventName, eventDate, eventLocation } = req.query;
+    const context = {
+      //use defaults if no data passed through
+      eventName: eventName || "Default Event",
+      eventDate: eventDate || "Default Date",
+      eventLocation: eventLocation || "Default Location"
+    };
+    return res.render("pages/RSVP", context);
   } catch (err) {
-    console.error("Error fetching event data:", err);
+    console.error("Error loading event details:", err);
     return res.status(500).send("Error loading event details");
   }
 });
@@ -100,18 +97,25 @@ app.get("/rsvp", async (req, res) => {
 app.post("/api/rsvp", async (req, res) => {
   try {
     const { name, email, guests, notes } = req.body;
-
-    // Insert into your RSVP table (create it if it doesn’t exist)
+    await db.none(`
+      CREATE TABLE IF NOT EXISTS rsvps (
+        rsvp_id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) NOT NULL,
+        guests INTEGER DEFAULT 1 CHECK (guests > 0),
+        notes TEXT,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
     await db.none(
       `INSERT INTO rsvps (name, email, guests, notes)
-       VALUES ($1, $2, $3, $4)`,
+       VALUES ($1, $2, $3, $4);`,
       [name, email, guests, notes]
     );
-
-    res.json({ message: "RSVP saved successfully" });
+    res.json({ message: "✅ RSVP saved successfully" });
   } catch (error) {
-    console.error("Error saving RSVP:", error);
-    res.status(500).json({ message: "Database error" });
+    console.error("❌ Error saving RSVP:", error);
+    res.status(500).json({ message: "Database error", error: error.message });
   }
 });
 
