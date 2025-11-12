@@ -79,6 +79,9 @@ app.use(
     extended: true,
   }),
 );
+
+app.use("/pages", express.static(path.join(__dirname, "views/pages")));
+
 app.get("/", (req, res) => {
   return res.render("", { layout: "main" });
 });
@@ -324,6 +327,30 @@ app.get("/feed", async (req, res) => {
 });
 
 
+app.get("/api/me", async (req, res) => {
+  try {
+    // Check that the user is logged in
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not logged in" });
+    }
+
+    // Query only the username for this user
+    const user = await db.oneOrNone(
+      "SELECT username FROM users WHERE id = $1",
+      [req.session.userId]
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Return just the username as JSON
+    res.json({ username: user.username });
+  } catch (err) {
+    console.error("GET /api/me error:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = app.listen(3000);
 console.log("Server is listening on port 3000");
