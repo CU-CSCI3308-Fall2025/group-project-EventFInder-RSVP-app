@@ -47,3 +47,19 @@ Abhiram:
 		Add authentication
 Blockers:
 	None
+
+-----------------------------------
+
+Meeting Notes for November 12:
+
+Abhi: Showed Demo with events page, local events, ticketmaster events
+Plan for next week: make view details & RSVP buttons work and add authentication
+
+Josh: Worked on username GET request & email, 
+Plan for next week: finish & test that in the upcoming week as well as standardize the look across pages
+
+Robbie: Finishing login across pages, but had issues with handlebars so it’s not functional yet. Frontend is done but backend needs more work.
+Plan for next week: Continue work on said issues
+
+Alex: Finished handlebars on front page, did get and post for RSVP page
+Plan for next week: Going to connect to database and table, wrap everything up.
