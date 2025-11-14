@@ -136,25 +136,43 @@ app.get("/register", (req, res) => {
 });
 
 // POST /register
-app.post("/register", async (req, res) => {
+app.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
+
+    // Email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email || !emailRegex.test(email)) {
+      return res.render('pages/Register', {
+        message: 'Invalid or missing email format.',
+        error: true,
+      });
+    }
+
+    // Hash the password using bcrypt
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.none("INSERT INTO users (name, email, password) VALUES ($1, $2, $3)", [
-      name,
-      email,
-      hashedPassword,
-    ]);
-    res.redirect("/login");
+
+    // Insert name, email, and hashed password into the 'users' table
+    await db.none(
+      'INSERT INTO users(name, email, password) VALUES($1, $2, $3)',
+      [name, email, hashedPassword]
+    );
+
+    // Redirect to Login page after successful registration
+    res.redirect('/Login');
+
   } catch (err) {
-    console.error("Registration error:", err);
-    res.render("pages/Register", {
-      title: "Register",
-      message: "Registration failed. Try a different email.",
+    console.error('Error during registration:', err);
+
+    // If an error occurs (e.g., duplicate email), re-render the Register page with a message
+    res.render('pages/Register', {
+      message: 'Registration failed. Email may already exist.',
       error: true,
     });
   }
 });
+
 
 // GET /login
 app.get("/login", (req, res) => {
