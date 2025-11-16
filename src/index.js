@@ -83,7 +83,7 @@ app.use(
 app.use("/pages", express.static(path.join(__dirname, "views/pages")));
 
 app.get("/", (req, res) => {
-  return res.render("", { layout: "main" });
+  return res.render("Login", { layout: "main" }); // should we put the login or register page here?
 });
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
@@ -104,9 +104,10 @@ app.get("/rsvp", async (req, res) => {
   }
 });
 
-app.post("/api/rsvp", async (req, res) => {
+app.post("/submit-rsvp", async (req, res) => {
   try {
     const { name, email, guests, notes } = req.body;
+    const guestCount = parseInt(guests, 10) || 1;
     await db.none(`
       CREATE TABLE IF NOT EXISTS rsvps (
         rsvp_id SERIAL PRIMARY KEY,
@@ -120,7 +121,7 @@ app.post("/api/rsvp", async (req, res) => {
     await db.none(
       `INSERT INTO rsvps (name, email, guests, notes)
        VALUES ($1, $2, $3, $4);`,
-      [name, email, guests, notes]
+      [name, email, guestCount, notes]
     );
     res.json({ message: "✅ RSVP saved successfully" });
   } catch (error) {

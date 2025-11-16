@@ -13,3 +13,7 @@ Week of 10/13/25
 -Finished log in/register database functionality
 -Log in/Register are fully functional
 -Fixed test bug so that it directs to api register post method, otherwise it is not functional
+
+Week of 11/17/25
+- Fixed HBS for RSVP page
+- Connected backend to RSVP
