@@ -139,7 +139,19 @@ app.get("/register", (req, res) => {
 app.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
+  /*  // Ensure users table exists
+  db.none(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      email VARCHAR(200) UNIQUE NOT NULL,
+      password VARCHAR(200) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `)
+    .then(() => console.log("Users table ready"))
+    .catch((err) => console.error("Users table error:", err));
+*/
     // Email format check
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -171,6 +183,71 @@ app.post('/register', async (req, res) => {
       error: true,
     });
   }
+}); 
+
+// *****************************************************
+// JSON API VERSION FOR TESTS ONLY
+// *****************************************************
+
+app.post("/api/register", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email and password are required",
+      });
+    }
+
+    // Name required
+    if (!name) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email and password are required",
+      });
+    }
+
+    // Email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid email address",
+      });
+    }
+
+    // Password length check
+    if (password.length < 8) {
+      return res.status(400).json({
+        status: "error",
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert into users
+    await db.none(
+      "INSERT INTO users(name, email, password) VALUES($1, $2, $3)",
+      [name, email, hashedPassword]
+    );
+
+    return res.status(201).json({
+      status: "success",
+      message: "User created",
+    });
+
+  } catch (err) {
+    console.error("API register error:", err);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Server error",
+    });
+  }
 });
 
 
@@ -194,7 +271,7 @@ app.post("/login", async (req, res) => {
     }
 
     req.session.user = { id: user.id, name: user.name, email: user.email };
-    res.redirect("/profile");
+    res.redirect("/feed");
   } catch (err) {
     console.error("Login error:", err);
     res.render("pages/Login", {
@@ -208,9 +285,9 @@ app.post("/login", async (req, res) => {
 
 app.get("/feed", async (req, res) => {
   // Check for authentication
-  // if (!req.session.user) {
-  //   return res.redirect("/login");
-  // }
+   if (!req.session.user) {
+     return res.redirect("/login");
+   }
 
   const { includeApi, includeLocal, searchQuery, sortBy } = req.query;
 

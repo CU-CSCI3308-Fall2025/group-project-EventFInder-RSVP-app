@@ -35,7 +35,7 @@ describe("Register User", () => {
     const timestamp = Date.now();
     chai
       .request(server)
-      .post("/register")
+      .post("/api/register")
       .send({
         name: "Test User",
         email: `testuser${timestamp}@example.com`,
@@ -53,7 +53,7 @@ describe("Register User", () => {
   it("Negative: /register - Should fail when name is missing", (done) => {
     chai
       .request(server)
-      .post("/register")
+      .post("/api/register")
       .send({
         email: "test@example.com",
         password: "password123",
@@ -70,7 +70,7 @@ describe("Register User", () => {
   it("Negative: /register - Should fail with invalid email format", (done) => {
     chai
       .request(server)
-      .post("/register")
+      .post("/api/register")
       .send({
         name: "Test User",
         email: "invalid-email",
@@ -88,7 +88,7 @@ describe("Register User", () => {
   it("Negative: /register - Should fail when password is too short", (done) => {
     chai
       .request(server)
-      .post("/register")
+      .post("/api/register")
       .send({
         name: "Test User",
         email: "test@example.com",
@@ -108,7 +108,7 @@ describe("Register User", () => {
   it("Negative: /register - Should fail when email is missing", (done) => {
     chai
       .request(server)
-      .post("/register")
+      .post("/api/register")
       .send({
         name: "Test User",
         password: "password123",

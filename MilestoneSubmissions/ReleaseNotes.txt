@@ -4,3 +4,12 @@
 -Added Routes for RSVP page
 -Finished RSVP page html/hbs
 -Connected RSVP to database
+
+
+
+Week of 10/13/25
+-Converted html to hbs for log in and register pages
+-Finished log in/register route functionality
+-Finished log in/register database functionality
+-Log in/Register are fully functional
+-Fixed test bug so that it directs to api register post method, otherwise it is not functional
