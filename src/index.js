@@ -83,7 +83,7 @@ app.use(
 app.use("/pages", express.static(path.join(__dirname, "views/pages")));
 
 app.get("/", (req, res) => {
-  return res.render("Login", { layout: "main" }); // should we put the login or register page here?
+  return res.render("pages/Login", { layout: "main" }); // should we put the login or register page here?
 });
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });

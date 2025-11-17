@@ -89,7 +89,7 @@
 <script>
 document.getElementById("rsvp-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-
+  //get data for entry from the passed data
   const data = {
     name: document.getElementById("name").value.trim(),
     email: document.getElementById("email").value.trim(),
@@ -98,12 +98,13 @@ document.getElementById("rsvp-form").addEventListener("submit", async (event) =>
   };
 
   try {
+    //submit rsvp
     const response = await fetch("/submit-rsvp", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify(data)
     });
-
+    //error catching
     if (!response.ok) {
       console.error("Server returned an error");
       alert("❌ Error submitting RSVP. Please try again.");
@@ -115,6 +116,7 @@ document.getElementById("rsvp-form").addEventListener("submit", async (event) =>
     document.getElementById("confirmation").style.display = "block";
 
   } catch (err) {
+    //error catching
     console.error("RSVP submission error:", err);
     alert("❌ Error submitting RSVP. Please try again.");
   }
