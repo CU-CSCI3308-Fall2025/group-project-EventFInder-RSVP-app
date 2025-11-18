@@ -95,7 +95,7 @@ app.get("/rsvp", async (req, res) => {
       //use defaults if no data passed through
       eventName: eventName || "Default Event",
       eventDate: eventDate || "Default Date",
-      eventLocation: eventLocation || "Default Location"
+      eventLocation: eventLocation || "Default Location",
     };
     return res.render("pages/RSVP", context);
   } catch (err) {
@@ -121,7 +121,7 @@ app.post("/submit-rsvp", async (req, res) => {
     await db.none(
       `INSERT INTO rsvps (name, email, guests, notes)
        VALUES ($1, $2, $3, $4);`,
-      [name, email, guestCount, notes]
+      [name, email, guestCount, notes],
     );
     res.json({ message: "✅ RSVP saved successfully" });
   } catch (error) {
@@ -130,17 +130,16 @@ app.post("/submit-rsvp", async (req, res) => {
   }
 });
 
-
 /// GET /register
 app.get("/register", (req, res) => {
   res.render("pages/Register", { title: "Register" });
 });
 
 // POST /register
-app.post('/register', async (req, res) => {
+app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-  /*  // Ensure users table exists
+    /*  // Ensure users table exists
   db.none(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -157,8 +156,8 @@ app.post('/register', async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!email || !emailRegex.test(email)) {
-      return res.render('pages/Register', {
-        message: 'Invalid or missing email format.',
+      return res.render("pages/Register", {
+        message: "Invalid or missing email format.",
         error: true,
       });
     }
@@ -168,23 +167,22 @@ app.post('/register', async (req, res) => {
 
     // Insert name, email, and hashed password into the 'users' table
     await db.none(
-      'INSERT INTO users(name, email, password) VALUES($1, $2, $3)',
-      [name, email, hashedPassword]
+      "INSERT INTO users(name, email, password) VALUES($1, $2, $3)",
+      [name, email, hashedPassword],
     );
 
     // Redirect to Login page after successful registration
-    res.redirect('/Login');
-
+    res.redirect("/Login");
   } catch (err) {
-    console.error('Error during registration:', err);
+    console.error("Error during registration:", err);
 
     // If an error occurs (e.g., duplicate email), re-render the Register page with a message
-    res.render('pages/Register', {
-      message: 'Registration failed. Email may already exist.',
+    res.render("pages/Register", {
+      message: "Registration failed. Email may already exist.",
       error: true,
     });
   }
-}); 
+});
 
 // *****************************************************
 // JSON API VERSION FOR TESTS ONLY
@@ -233,14 +231,13 @@ app.post("/api/register", async (req, res) => {
     // Insert into users
     await db.none(
       "INSERT INTO users(name, email, password) VALUES($1, $2, $3)",
-      [name, email, hashedPassword]
+      [name, email, hashedPassword],
     );
 
     return res.status(201).json({
       status: "success",
       message: "User created",
     });
-
   } catch (err) {
     console.error("API register error:", err);
 
@@ -251,7 +248,6 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-
 // GET /login
 app.get("/login", (req, res) => {
   res.render("pages/Login", { title: "Login" });
@@ -261,7 +257,9 @@ app.get("/login", (req, res) => {
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await db.oneOrNone("SELECT * FROM users WHERE email = $1", [email]);
+    const user = await db.oneOrNone("SELECT * FROM users WHERE email = $1", [
+      email,
+    ]);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.render("pages/Login", {
@@ -283,12 +281,11 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
 app.get("/feed", async (req, res) => {
   // Check for authentication
-   if (!req.session.user) {
-     return res.redirect("/login");
-   }
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
 
   const { includeApi, includeLocal, searchQuery, sortBy } = req.query;
 
@@ -422,6 +419,76 @@ app.get("/feed", async (req, res) => {
   });
 });
 
+// POST /create-event - Create a custom event
+app.post("/create-event", async (req, res) => {
+  try {
+    // Check if user is authenticated
+    if (!req.session.user) {
+      return res.status(401).json({
+        success: false,
+        message: "You must be logged in to create events",
+      });
+    }
+
+    const { title, description, location, startDateTime, endDateTime, image } =
+      req.body;
+
+    // Validation - all fields required except image
+    if (!title || !description || !location || !startDateTime || !endDateTime) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields except image are required",
+      });
+    }
+
+    // Validate that start time is before end time
+    const startTime = new Date(startDateTime);
+    const endTime = new Date(endDateTime);
+
+    if (startTime >= endTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Start time must be before end time",
+      });
+    }
+
+    // Validate that the event is in the future
+    const now = new Date();
+    if (startTime <= now) {
+      return res.status(400).json({
+        success: false,
+        message: "Event start time must be in the future",
+      });
+    }
+
+    // Insert the new event into the database
+    const newEvent = await db.one(
+      `INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, title, description, location, start_time, end_time, created_at`,
+      [
+        title,
+        description,
+        location,
+        startDateTime,
+        endDateTime,
+        req.session.user.id,
+      ],
+    );
+
+    return res.json({
+      success: true,
+      message: "Event created successfully!",
+      event: newEvent,
+    });
+  } catch (err) {
+    console.error("Error creating event:", err);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while creating the event",
+    });
+  }
+});
 
 app.get("/api/me", async (req, res) => {
   try {
@@ -433,7 +500,7 @@ app.get("/api/me", async (req, res) => {
     // Query only the username for this user
     const user = await db.oneOrNone(
       "SELECT username FROM users WHERE id = $1",
-      [req.session.userId]
+      [req.session.userId],
     );
 
     if (!user) {

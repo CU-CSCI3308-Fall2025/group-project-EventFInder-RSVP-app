@@ -1,5 +1,10 @@
 <div class="container mt-4">
-    <h1 class="mb-4">Discover Events</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Discover Events</h1>
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#createEventModal">
+            <i class="bi bi-plus-circle"></i> Create Event
+        </button>
+    </div>
 
     <!-- Search Form -->
     <div class="card mb-4">
@@ -79,9 +84,234 @@
     </div>
 </div>
 
+<!-- Create Event Modal -->
+<div class="modal fade" id="createEventModal" tabindex="-1" aria-labelledby="createEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createEventModalLabel">Create New Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createEventForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="eventTitle" class="form-label">Event Title *</label>
+                                <input type="text" class="form-control" id="eventTitle" name="title" required>
+                                <div class="invalid-feedback">Please provide a valid event title.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="eventLocation" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="eventLocation" name="location" required>
+                                <div class="invalid-feedback">Please provide a valid location.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="eventDescription" class="form-label">Description *</label>
+                        <textarea class="form-control" id="eventDescription" name="description" rows="4" required></textarea>
+                        <div class="invalid-feedback">Please provide an event description.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="eventStartDate" class="form-label">Start Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="eventStartDate" name="startDateTime" required>
+                                <div class="invalid-feedback">Please provide a valid start date and time.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="eventEndDate" class="form-label">End Date & Time *</label>
+                                <input type="datetime-local" class="form-control" id="eventEndDate" name="endDateTime" required>
+                                <div class="invalid-feedback">Please provide a valid end date and time.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="eventImage" class="form-label">Event Image (Optional)</label>
+                        <input type="url" class="form-control" id="eventImage" name="image" placeholder="Enter image URL">
+                        <div class="form-text">You can add an image URL for your event (optional).</div>
+                    </div>
+
+                    <div class="alert alert-danger d-none" id="errorAlert"></div>
+                    <div class="alert alert-success d-none" id="successAlert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="submitEventBtn">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    Create Event
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Auto-submit form when sort option changes
     document.getElementById('sortBy').addEventListener('change', function() {
         this.form.submit();
+    });
+
+    // Create Event Modal JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        const createEventForm = document.getElementById('createEventForm');
+        const submitBtn = document.getElementById('submitEventBtn');
+        const errorAlert = document.getElementById('errorAlert');
+        const successAlert = document.getElementById('successAlert');
+        const modal = new bootstrap.Modal(document.getElementById('createEventModal'));
+
+        // Set minimum date to current date and time
+        const now = new Date();
+        const minDateTime = now.toISOString().slice(0, 16);
+        document.getElementById('eventStartDate').min = minDateTime;
+        document.getElementById('eventEndDate').min = minDateTime;
+
+        // Update end date minimum when start date changes
+        document.getElementById('eventStartDate').addEventListener('change', function() {
+            document.getElementById('eventEndDate').min = this.value;
+
+            // Clear end date if it's before the new start date
+            const endDateInput = document.getElementById('eventEndDate');
+            if (endDateInput.value && endDateInput.value <= this.value) {
+                endDateInput.value = '';
+            }
+        });
+
+        // Form validation
+        function validateForm() {
+            let isValid = true;
+            const requiredFields = ['eventTitle', 'eventDescription', 'eventLocation', 'eventStartDate', 'eventEndDate'];
+
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                    field.classList.add('is-valid');
+                }
+            });
+
+            // Validate start and end times
+            const startDate = document.getElementById('eventStartDate').value;
+            const endDate = document.getElementById('eventEndDate').value;
+
+            if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+                document.getElementById('eventEndDate').classList.add('is-invalid');
+                showError('End date must be after start date');
+                isValid = false;
+            }
+
+            // Validate that start date is in the future
+            if (startDate && new Date(startDate) <= new Date()) {
+                document.getElementById('eventStartDate').classList.add('is-invalid');
+                showError('Start date must be in the future');
+                isValid = false;
+            }
+
+            return isValid;
+        }
+
+        function showError(message) {
+            errorAlert.textContent = message;
+            errorAlert.classList.remove('d-none');
+            successAlert.classList.add('d-none');
+        }
+
+        function showSuccess(message) {
+            successAlert.textContent = message;
+            successAlert.classList.remove('d-none');
+            errorAlert.classList.add('d-none');
+        }
+
+        function hideAlerts() {
+            errorAlert.classList.add('d-none');
+            successAlert.classList.add('d-none');
+        }
+
+        // Submit button click handler
+        submitBtn.addEventListener('click', async function() {
+            hideAlerts();
+
+            if (!validateForm()) {
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+
+            try {
+                const formData = new FormData(createEventForm);
+                const eventData = Object.fromEntries(formData);
+
+                const response = await fetch('/create-event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(eventData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess(result.message);
+                    createEventForm.reset();
+
+                    // Reset form validation classes
+                    createEventForm.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
+                        el.classList.remove('is-valid', 'is-invalid');
+                    });
+
+                    // Close modal after 2 seconds and refresh page
+                    setTimeout(() => {
+                        modal.hide();
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showError(result.message || 'An error occurred while creating the event');
+                }
+            } catch (error) {
+                console.error('Error creating event:', error);
+                showError('Network error. Please try again.');
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Create Event';
+            }
+        });
+
+        // Reset form when modal is closed
+        document.getElementById('createEventModal').addEventListener('hidden.bs.modal', function() {
+            createEventForm.reset();
+            hideAlerts();
+            createEventForm.querySelectorAll('.is-valid, .is-invalid').forEach(el => {
+                el.classList.remove('is-valid', 'is-invalid');
+            });
+        });
+
+        // Real-time validation on input
+        createEventForm.addEventListener('input', function(e) {
+            if (e.target.hasAttribute('required')) {
+                if (e.target.value.trim()) {
+                    e.target.classList.remove('is-invalid');
+                    e.target.classList.add('is-valid');
+                } else {
+                    e.target.classList.add('is-invalid');
+                    e.target.classList.remove('is-valid');
+                }
+            }
+        });
     });
 </script>
