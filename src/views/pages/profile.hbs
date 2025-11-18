@@ -1,0 +1,45 @@
+{{!-- views/profile.hbs --}}
+
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <h2 class="card-title mb-3">User Profile</h2>
+          <hr />
+
+          <div class="mb-3">
+            <h5 class="text-muted">Username</h5>
+            <p id="username" class="fs-5">
+              {{username}}
+            </p>
+          </div>
+
+          <div class="mb-3">
+            <h5 class="text-muted">Email</h5>
+            <p id="email" class="fs-5">
+              {{email}}
+            </p>
+          </div>
+
+          <button class="btn btn-primary mt-3">Edit Profile</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // If you *still* want to fetch on the client instead of passing data from the server:
+  fetch("/api/me", { credentials: "include" })
+    .then(res => res.json())
+    .then(data => {
+      if (data.username) {
+        document.getElementById("username").textContent = data.username;
+      }
+      if (data.email) {
+        document.getElementById("email").textContent = data.email;
+      }
+    })
+    .catch(err => console.error("Error fetching user info:", err));
+</script>
