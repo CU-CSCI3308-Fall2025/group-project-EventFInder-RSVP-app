@@ -516,13 +516,18 @@ app.get("/api/me", async (req, res) => {
 });
 
 app.get("/profile", (req, res) => {
-  const user = req.user; // however you're storing auth info
+  // 🔐 Require login, same as /feed
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
+  const user = req.session.user; // this is what you set on login
 
   res.render("pages/profile", {
     layout: "main",
     title: "User Profile",
-    username: user?.username || "Guest",
-    email: user?.email || "N/A",
+    username: user.name || "Guest",   // or user.username if you have that column
+    email: user.email || "N/A",
   });
 });
 
