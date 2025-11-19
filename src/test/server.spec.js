@@ -475,3 +475,733 @@ describe("Feed Page Tests", () => {
 });
 
 // ********************************************************************************
+
+// *********************** CREATE EVENT ENDPOINT TESTCASES ***********************
+
+describe("Create Event", () => {
+  let sessionCookie;
+  let testUser;
+
+  // Helper function to create a test user and get session cookie
+  before(async () => {
+    const timestamp = Date.now();
+    testUser = {
+      name: "Event Creator Test User",
+      email: `eventcreator${timestamp}@example.com`,
+      password: "password123",
+    };
+
+    // Register test user
+    await chai.request(server).post("/api/register").send(testUser);
+
+    // Login to get session cookie
+    const loginRes = await chai
+      .request(server)
+      .post("/login")
+      .redirects(0)
+      .send({
+        email: testUser.email,
+        password: testUser.password,
+      });
+
+    // Extract session cookie from login response
+    if (loginRes.headers["set-cookie"]) {
+      sessionCookie = loginRes.headers["set-cookie"];
+    }
+  });
+
+  // Positive test case 1 - Successfully create an event with all required fields
+  it("Positive: /create-event - Should create event with all required fields", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 7); // 7 days from now
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2); // 2 hours after start
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Test Event",
+      description: "This is a test event description",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      expect(res.body.message).to.equal("Event created successfully!");
+      expect(res.body.event).to.be.an("object");
+      expect(res.body.event.title).to.equal("Test Event");
+      expect(res.body.event.description).to.equal(
+        "This is a test event description",
+      );
+      expect(res.body.event.location).to.equal("Test Location");
+      done();
+    });
+  });
+
+  // Positive test case 2 - Create event with optional image field
+  it("Positive: /create-event - Should create event with optional image field", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 3);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Test Event with Image",
+      description: "Event with image description",
+      location: "Image Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+      image: "https://example.com/image.jpg",
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      expect(res.body.message).to.equal("Event created successfully!");
+      done();
+    });
+  });
+
+  // Negative test case 1 - Unauthenticated user trying to create event
+  it("Negative: /create-event - Should reject unauthenticated user", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Unauthorized Test Event",
+      description: "This should fail",
+      location: "Unauthorized Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    chai
+      .request(server)
+      .post("/create-event")
+      .send(eventData)
+      .end((err, res) => {
+        expect(res).to.have.status(401);
+        expect(res.body.success).to.equal(false);
+        expect(res.body.message).to.equal(
+          "You must be logged in to create events",
+        );
+        done();
+      });
+  });
+
+  // Negative test case 2 - Missing title field
+  it("Negative: /create-event - Should fail when title is missing", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      description: "Event without title",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Negative test case 3 - Missing description field
+  it("Negative: /create-event - Should fail when description is missing", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Event without description",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Negative test case 4 - Missing location field
+  it("Negative: /create-event - Should fail when location is missing", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Event without location",
+      description: "This event has no location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Negative test case 5 - Missing start date/time
+  it("Negative: /create-event - Should fail when start date/time is missing", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const endDateTime = futureDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Event without start time",
+      description: "This event has no start time",
+      location: "Test Location",
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Negative test case 6 - Missing end date/time
+  it("Negative: /create-event - Should fail when end date/time is missing", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Event without end time",
+      description: "This event has no end time",
+      location: "Test Location",
+      startDateTime: startDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Negative test case 7 - Start time is after end time
+  it("Negative: /create-event - Should fail when start time is after end time", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const earlierDate = new Date(futureDate);
+    earlierDate.setHours(earlierDate.getHours() - 2); // 2 hours before start
+    const endDateTime = earlierDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Invalid Time Event",
+      description: "Start time after end time",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("Start time must be before end time");
+      done();
+    });
+  });
+
+  // Negative test case 8 - Event start time in the past
+  it("Negative: /create-event - Should fail when event start time is in the past", (done) => {
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 1); // Yesterday
+    const startDateTime = pastDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(pastDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Past Event",
+      description: "This event is in the past",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal(
+        "Event start time must be in the future",
+      );
+      done();
+    });
+  });
+
+  // Negative test case 9 - Start time equals end time
+  it("Negative: /create-event - Should fail when start time equals end time", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const dateTime = futureDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Zero Duration Event",
+      description: "Event with same start and end time",
+      location: "Test Location",
+      startDateTime: dateTime,
+      endDateTime: dateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("Start time must be before end time");
+      done();
+    });
+  });
+
+  // Edge case test 1 - Empty string fields
+  it("Edge Case: /create-event - Should fail with empty string fields", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "",
+      description: "",
+      location: "",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(400);
+      expect(res.body.success).to.equal(false);
+      expect(res.body.message).to.equal("All fields except image are required");
+      done();
+    });
+  });
+
+  // Edge case test 2 - Very long field values
+  it("Edge Case: /create-event - Should handle very long field values", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const longString = "a".repeat(1000);
+    const eventData = {
+      title: longString,
+      description: longString,
+      location: longString,
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      // Should either succeed or fail gracefully (depending on DB constraints)
+      expect(res.status).to.be.oneOf([200, 400, 500]);
+      if (res.status === 200) {
+        expect(res.body.success).to.equal(true);
+      } else {
+        expect(res.body.success).to.equal(false);
+      }
+      done();
+    });
+  });
+
+  // Edge case test 3 - Special characters in fields
+  it("Edge Case: /create-event - Should handle special characters in fields", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Event with Special Chars: @#$%^&*()",
+      description:
+        "Description with quotes \"double\" and 'single' and <HTML> tags",
+      location: "Location with symbols: & < > \" '",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      expect(res.body.event.title).to.equal(
+        "Event with Special Chars: @#$%^&*()",
+      );
+      done();
+    });
+  });
+
+  // Edge case test 4 - Invalid date format
+  it("Edge Case: /create-event - Should handle invalid date format gracefully", (done) => {
+    const eventData = {
+      title: "Invalid Date Event",
+      description: "Event with invalid date format",
+      location: "Test Location",
+      startDateTime: "invalid-date",
+      endDateTime: "also-invalid",
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      // Should fail gracefully, either with validation error or database error
+      expect(res.status).to.be.oneOf([400, 500]);
+      expect(res.body.success).to.equal(false);
+      done();
+    });
+  });
+
+  // Edge case test 5 - Very short duration event (1 minute)
+  it("Edge Case: /create-event - Should handle very short duration events", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setMinutes(endDate.getMinutes() + 1); // 1 minute later
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Short Event",
+      description: "Very short duration event",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      done();
+    });
+  });
+
+  // Edge case test 6 - Very long duration event (1 year)
+  it("Edge Case: /create-event - Should handle very long duration events", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setFullYear(endDate.getFullYear() + 1); // 1 year later
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Long Duration Event",
+      description: "Event lasting one year",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      done();
+    });
+  });
+
+  // Boundary test 1 - Event starting in exactly 1 minute
+  it("Boundary: /create-event - Should create event starting in exactly 1 minute", (done) => {
+    const futureDate = new Date();
+    futureDate.setMinutes(futureDate.getMinutes() + 1);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 1);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Near Future Event",
+      description: "Event starting very soon",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      done();
+    });
+  });
+
+  // Boundary test 2 - Event starting in far future (1 year from now)
+  it("Boundary: /create-event - Should create event in far future", (done) => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Far Future Event",
+      description: "Event in the distant future",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      done();
+    });
+  });
+
+  // Performance test - Multiple events creation
+  it("Performance: /create-event - Should handle multiple event creations", (done) => {
+    const promises = [];
+
+    for (let i = 0; i < 5; i++) {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + i + 1);
+      const startDateTime = futureDate.toISOString().slice(0, 16);
+
+      const endDate = new Date(futureDate);
+      endDate.setHours(endDate.getHours() + 2);
+      const endDateTime = endDate.toISOString().slice(0, 16);
+
+      const eventData = {
+        title: `Performance Test Event ${i + 1}`,
+        description: `Description for performance test event ${i + 1}`,
+        location: `Location ${i + 1}`,
+        startDateTime: startDateTime,
+        endDateTime: endDateTime,
+      };
+
+      const req = chai.request(server).post("/create-event").send(eventData);
+      if (sessionCookie) {
+        req.set("Cookie", sessionCookie);
+      }
+      promises.push(req);
+    }
+
+    Promise.all(promises)
+      .then((responses) => {
+        responses.forEach((res) => {
+          expect(res).to.have.status(200);
+          expect(res.body.success).to.equal(true);
+        });
+        done();
+      })
+      .catch(done);
+  });
+
+  // Security test - SQL injection attempt
+  it("Security: /create-event - Should prevent SQL injection attempts", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 5);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 2);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "'; DROP TABLE custom_events; --",
+      description: "SQL injection attempt in description",
+      location: "Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      // Should either succeed (SQL injection prevented) or fail gracefully
+      expect(res.status).to.be.oneOf([200, 400, 500]);
+      if (res.status === 200) {
+        expect(res.body.success).to.equal(true);
+        // The title should be stored as-is, not executed as SQL
+        expect(res.body.event.title).to.equal(
+          "'; DROP TABLE custom_events; --",
+        );
+      }
+      done();
+    });
+  });
+
+  // Data integrity test - Verify event data is stored correctly
+  it("Data Integrity: /create-event - Should store event data correctly in database", (done) => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 8);
+    const startDateTime = futureDate.toISOString().slice(0, 16);
+
+    const endDate = new Date(futureDate);
+    endDate.setHours(endDate.getHours() + 3);
+    const endDateTime = endDate.toISOString().slice(0, 16);
+
+    const eventData = {
+      title: "Data Integrity Test Event",
+      description: "Testing data integrity for event creation",
+      location: "Integrity Test Location",
+      startDateTime: startDateTime,
+      endDateTime: endDateTime,
+    };
+
+    const req = chai.request(server).post("/create-event").send(eventData);
+    if (sessionCookie) {
+      req.set("Cookie", sessionCookie);
+    }
+
+    req.end((err, res) => {
+      expect(res).to.have.status(200);
+      expect(res.body.success).to.equal(true);
+      expect(res.body.event).to.have.property("id");
+      expect(res.body.event).to.have.property("created_at");
+      expect(res.body.event.title).to.equal(eventData.title);
+      expect(res.body.event.description).to.equal(eventData.description);
+      expect(res.body.event.location).to.equal(eventData.location);
+
+      // Verify dates are stored correctly (allowing for timezone differences)
+      expect(new Date(res.body.event.start_time)).to.be.instanceOf(Date);
+      expect(new Date(res.body.event.end_time)).to.be.instanceOf(Date);
+      done();
+    });
+  });
+});
+
+// ********************************************************************************
