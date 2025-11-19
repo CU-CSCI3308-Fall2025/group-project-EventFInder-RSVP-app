@@ -84,6 +84,8 @@
   <div id="confirmation">
     🎉 Thank you! Your RSVP has been submitted.
   </div>
+  <br><br>
+  <button id="back-to-feed" class="submit-btn">Back to Feed</button>
 </div>
 
 <script>
@@ -114,6 +116,10 @@ document.getElementById("rsvp-form").addEventListener("submit", async (event) =>
     // success
     document.getElementById("rsvp-form").style.display = "none";
     document.getElementById("confirmation").style.display = "block";
+    //back to feed button
+    document.getElementById("back-to-feed").addEventListener("click", () => {
+      window.location.replace("/feed");
+    });
 
   } catch (err) {
     //error catching
