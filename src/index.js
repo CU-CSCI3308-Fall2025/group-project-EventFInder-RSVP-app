@@ -515,5 +515,16 @@ app.get("/api/me", async (req, res) => {
   }
 });
 
+app.get("/profile", (req, res) => {
+  const user = req.user; // however you're storing auth info
+
+  res.render("pages/profile", {
+    layout: "main",
+    title: "User Profile",
+    username: user?.username || "Guest",
+    email: user?.email || "N/A",
+  });
+});
+
 module.exports = app.listen(3000);
 console.log("Server is listening on port 3000");
