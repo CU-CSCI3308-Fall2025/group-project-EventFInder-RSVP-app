@@ -90,14 +90,55 @@ app.get("/welcome", (req, res) => {
 });
 app.get("/rsvp", async (req, res) => {
   try {
-    const { eventName, eventDate, eventLocation } = req.query;
-    const context = {
-      //use defaults if no data passed through
-      eventName: eventName || "Default Event",
-      eventDate: eventDate || "Default Date",
-      eventLocation: eventLocation || "Default Location",
-    };
-    return res.render("pages/RSVP", context);
+    const eventId = req.query.event_id;
+
+    if (!eventId) {
+      return res.status(400).send("Missing event_id");
+    }
+
+    // Case 1: Local custom event
+    if (!eventId.startsWith("api_")) {
+      const localEvent = await db.oneOrNone(
+        "SELECT title, start_time, location FROM custom_events WHERE id = $1",
+        [eventId]
+      );
+
+      if (!localEvent) {
+        return res.status(404).send("Event not found");
+      }
+
+      return res.render("pages/RSVP", {
+        eventName: localEvent.title,
+        eventDate: localEvent.start_time,
+        eventLocation: localEvent.location
+      });
+    }
+
+    // Case 2: API event
+    const apiId = eventId.replace("api_", "");
+
+    const response = await axios.get(
+      "https://app.ticketmaster.com/discovery/v2/events/" + apiId + ".json",
+      {
+        params: { apikey: process.env.API_KEY }
+      }
+    );
+
+    const apiEvent = response.data;
+
+    const venue = apiEvent._embedded?.venues?.[0];
+    const location = venue
+      ? `${venue.name}, ${venue.city?.name || ""}, ${venue.state?.stateCode || ""}`
+          .replace(/,\s*,/g, ",")
+          .replace(/,\s*$/, "")
+      : "Location TBA";
+
+    return res.render("pages/RSVP", {
+      eventName: apiEvent.name,
+      eventDate: apiEvent.dates?.start?.dateTime,
+      eventLocation: location
+    });
+
   } catch (err) {
     console.error("Error loading event details:", err);
     return res.status(500).send("Error loading event details");
