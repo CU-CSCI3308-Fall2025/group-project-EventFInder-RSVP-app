@@ -17,3 +17,4 @@ Week of 11/13/25
 Week of 11/17/25
 - Fixed HBS for RSVP page
 - Connected backend to RSVP
+- Fixed population of RSVP
