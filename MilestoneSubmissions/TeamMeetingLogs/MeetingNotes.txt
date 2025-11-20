@@ -63,3 +63,17 @@ Plan for next week: Continue work on said issues
 
 Alex: Finished handlebars on front page, did get and post for RSVP page
 Plan for next week: Going to connect to database and table, wrap everything up.
+
+------------------------------------
+
+Meeting Notes for November 19:
+
+Showed the demo for the site
+Login, Feed, Creating Events, API connection, profile, etc.
+Showed project board with everything completed
+ 
+What everyone did:
+Abhi: Worked on creative end modal, added to the database, added testing for feed page, added endpoint for create event. Going to get view details working
+Alex: Worked on connecting to backend and added table for RSVP page, going to add data that’s going to populate into event title
+Robbie: Worked on backend & database connecting to user’s table, finished converting all to handlebars
+Josh: Worked on converting to handlebars and fixing everything up, standardizing the profile page with everything, and checking that the user is logged in before loading the page. going to try adding an edit profile button
