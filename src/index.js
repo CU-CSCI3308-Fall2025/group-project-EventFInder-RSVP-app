@@ -498,6 +498,17 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// GET /logout - Clears session and redirects to login
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
+    }
+    res.clearCookie("connect.sid"); // Clear the session cookie
+    res.redirect("/login");
+  });
+});
+
 app.get("/feed", async (req, res) => {
   // Check for authentication
   if (!req.session.user) {
