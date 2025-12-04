@@ -45,11 +45,120 @@ const dbConfig = {
 
 const db = pgp(dbConfig);
 
+// Migrate rsvps table to add new columns if they don't exist
+async function migrateRsvpsTable() {
+  try {
+    // Check if rsvps table exists
+    const tableExists = await db.oneOrNone(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'rsvps'
+      );
+    `);
+
+    if (tableExists && tableExists.exists) {
+      // Add user_id column if it doesn't exist
+      await db.none(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_name = 'rsvps' AND column_name = 'user_id'
+          ) THEN
+            ALTER TABLE rsvps ADD COLUMN user_id INTEGER REFERENCES users(id);
+          END IF;
+        END $$;
+      `);
+
+      // Add event_id column if it doesn't exist
+      await db.none(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_name = 'rsvps' AND column_name = 'event_id'
+          ) THEN
+            ALTER TABLE rsvps ADD COLUMN event_id VARCHAR(255);
+          END IF;
+        END $$;
+      `);
+
+      // Add event_name column if it doesn't exist
+      await db.none(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_name = 'rsvps' AND column_name = 'event_name'
+          ) THEN
+            ALTER TABLE rsvps ADD COLUMN event_name VARCHAR(255);
+          END IF;
+        END $$;
+      `);
+
+      // Add event_location column if it doesn't exist
+      await db.none(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_name = 'rsvps' AND column_name = 'event_location'
+          ) THEN
+            ALTER TABLE rsvps ADD COLUMN event_location VARCHAR(255);
+          END IF;
+        END $$;
+      `);
+
+      // Add event_date column if it doesn't exist
+      await db.none(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT FROM information_schema.columns
+            WHERE table_name = 'rsvps' AND column_name = 'event_date'
+          ) THEN
+            ALTER TABLE rsvps ADD COLUMN event_date TIMESTAMP;
+          END IF;
+        END $$;
+      `);
+
+      console.log("✅ RSVPs table migration completed successfully");
+    }
+  } catch (error) {
+    console.error("❌ Error migrating rsvps table:", error);
+  }
+}
+
+// Migrate custom_events table to add image_url column if it doesn't exist
+async function migrateCustomEventsTable() {
+  try {
+    // Add image_url column if it doesn't exist
+    await db.none(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT FROM information_schema.columns
+          WHERE table_name = 'custom_events' AND column_name = 'image_url'
+        ) THEN
+          ALTER TABLE custom_events ADD COLUMN image_url TEXT;
+        END IF;
+      END $$;
+    `);
+
+    console.log("✅ Custom events table migration completed successfully");
+  } catch (error) {
+    console.error("❌ Error migrating custom_events table:", error);
+  }
+}
+
 // test your database
 db.connect()
   .then((obj) => {
     console.log("Database connection successful"); // you can view this message in the docker compose logs
     obj.done(); // success, release the connection;
+    // Run migrations after successful connection
+    migrateRsvpsTable();
+    migrateCustomEventsTable();
   })
   .catch((error) => {
     console.log("ERROR:", error.message || error);
@@ -88,8 +197,14 @@ app.get("/", (req, res) => {
 app.get("/welcome", (req, res) => {
   res.json({ status: "success", message: "Welcome!" });
 });
+
 app.get("/rsvp", async (req, res) => {
   try {
+    // Check if user is logged in
+    if (!req.session.user) {
+      return res.redirect("/login");
+    }
+
     const eventId = req.query.event_id;
 
     if (!eventId) {
@@ -100,7 +215,7 @@ app.get("/rsvp", async (req, res) => {
     if (!eventId.startsWith("api_")) {
       const localEvent = await db.oneOrNone(
         "SELECT title, start_time, location FROM custom_events WHERE id = $1",
-        [eventId]
+        [eventId],
       );
 
       if (!localEvent) {
@@ -110,7 +225,10 @@ app.get("/rsvp", async (req, res) => {
       return res.render("pages/RSVP", {
         eventName: localEvent.title,
         eventDate: localEvent.start_time,
-        eventLocation: localEvent.location
+        eventLocation: localEvent.location,
+        eventId: eventId,
+        userName: req.session.user ? req.session.user.name : "",
+        userEmail: req.session.user ? req.session.user.email : "",
       });
     }
 
@@ -120,8 +238,8 @@ app.get("/rsvp", async (req, res) => {
     const response = await axios.get(
       "https://app.ticketmaster.com/discovery/v2/events/" + apiId + ".json",
       {
-        params: { apikey: process.env.API_KEY }
-      }
+        params: { apikey: process.env.API_KEY },
+      },
     );
 
     const apiEvent = response.data;
@@ -136,9 +254,11 @@ app.get("/rsvp", async (req, res) => {
     return res.render("pages/RSVP", {
       eventName: apiEvent.name,
       eventDate: apiEvent.dates?.start?.dateTime,
-      eventLocation: location
+      eventLocation: location,
+      eventId: eventId,
+      userName: req.session.user ? req.session.user.name : "",
+      userEmail: req.session.user ? req.session.user.email : "",
     });
-
   } catch (err) {
     console.error("Error loading event details:", err);
     return res.status(500).send("Error loading event details");
@@ -147,24 +267,80 @@ app.get("/rsvp", async (req, res) => {
 
 app.post("/submit-rsvp", async (req, res) => {
   try {
-    const { name, email, guests, notes } = req.body;
+    // Check if user is logged in
+    if (!req.session.user) {
+      return res.status(401).json({ message: "Must be logged in to RSVP" });
+    }
+
+    const {
+      name,
+      email,
+      guests,
+      notes,
+      event_id,
+      event_name,
+      event_location,
+      event_date,
+    } = req.body;
     const guestCount = parseInt(guests, 10) || 1;
-    await db.none(`
-      CREATE TABLE IF NOT EXISTS rsvps (
-        rsvp_id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        email VARCHAR(100) NOT NULL,
-        guests INTEGER DEFAULT 1 CHECK (guests > 0),
-        notes TEXT,
-        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    await db.none(
-      `INSERT INTO rsvps (name, email, guests, notes)
-       VALUES ($1, $2, $3, $4);`,
-      [name, email, guestCount, notes],
+    const userId = req.session.user.id;
+
+    // Convert and validate event_date
+    let eventDateFormatted = null;
+    if (event_date) {
+      try {
+        const dateObj = new Date(event_date);
+        if (!isNaN(dateObj.getTime())) {
+          eventDateFormatted = dateObj.toISOString();
+        }
+      } catch (e) {
+        console.warn("Invalid event date format:", event_date);
+      }
+    }
+
+    // Check if user already RSVP'd to this event
+    const existingRsvp = await db.oneOrNone(
+      `SELECT rsvp_id FROM rsvps WHERE user_id = $1 AND event_id = $2`,
+      [userId, event_id],
     );
-    res.json({ message: "✅ RSVP saved successfully" });
+
+    if (existingRsvp) {
+      // Update existing RSVP
+      await db.none(
+        `UPDATE rsvps SET name = $1, email = $2, guests = $3, notes = $4, event_name = $5, event_location = $6, event_date = $7, submitted_at = CURRENT_TIMESTAMP
+         WHERE user_id = $8 AND event_id = $9`,
+        [
+          name,
+          email,
+          guestCount,
+          notes,
+          event_name,
+          event_location,
+          eventDateFormatted,
+          userId,
+          event_id,
+        ],
+      );
+      res.json({ message: "✅ RSVP updated successfully" });
+    } else {
+      // Insert new RSVP
+      await db.none(
+        `INSERT INTO rsvps (user_id, event_id, name, email, guests, notes, event_name, event_location, event_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`,
+        [
+          userId,
+          event_id,
+          name,
+          email,
+          guestCount,
+          notes,
+          event_name,
+          event_location,
+          eventDateFormatted,
+        ],
+      );
+      res.json({ message: "✅ RSVP saved successfully" });
+    }
   } catch (error) {
     console.error("❌ Error saving RSVP:", error);
     res.status(500).json({ message: "Database error", error: error.message });
@@ -393,6 +569,16 @@ app.get("/feed", async (req, res) => {
           endTime = startDate.toISOString();
         }
 
+        // Extract image URL from API event
+        let imageUrl = null;
+        if (event.images && event.images.length > 0) {
+          // Find the highest quality image available
+          const sortedImages = event.images.sort(
+            (a, b) => (b.width || 0) - (a.width || 0),
+          );
+          imageUrl = sortedImages[0].url;
+        }
+
         return {
           id: `api_${event.id}`, // Prefix to distinguish from DB events
           title: event.name || "Untitled Event",
@@ -405,6 +591,7 @@ app.get("/feed", async (req, res) => {
           source: "ticketmaster",
           external_url: event.url || "",
           external_id: event.id,
+          image_url: imageUrl,
         };
       });
 
@@ -504,9 +691,9 @@ app.post("/create-event", async (req, res) => {
 
     // Insert the new event into the database
     const newEvent = await db.one(
-      `INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, title, description, location, start_time, end_time, created_at`,
+      `INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id, image_url)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, title, description, location, start_time, end_time, image_url, created_at`,
       [
         title,
         description,
@@ -514,6 +701,7 @@ app.post("/create-event", async (req, res) => {
         startDateTime,
         endDateTime,
         req.session.user.id,
+        image || null,
       ],
     );
 
@@ -556,20 +744,182 @@ app.get("/api/me", async (req, res) => {
   }
 });
 
-app.get("/profile", (req, res) => {
+// API endpoint to get user's RSVPs
+app.get("/api/user-rsvps", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const userId = req.session.user.id;
+
+    // Get all RSVPs for this user with event details
+    const rsvps = await db.any(
+      `
+      SELECT
+        r.rsvp_id,
+        r.event_id,
+        r.guests,
+        r.notes,
+        r.submitted_at,
+        COALESCE(ce.title, r.event_name) as event_title,
+        COALESCE(ce.location, r.event_location) as event_location,
+        COALESCE(ce.start_time, r.event_date) as event_start_time,
+        ce.end_time as event_end_time,
+        ce.image_url as event_image_url
+      FROM rsvps r
+      LEFT JOIN custom_events ce ON r.event_id = CAST(ce.id AS VARCHAR)
+      WHERE r.user_id = $1
+      ORDER BY r.submitted_at DESC
+    `,
+      [userId],
+    );
+
+    res.json({ rsvps });
+  } catch (error) {
+    console.error("Error fetching user RSVPs:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching RSVPs", error: error.message });
+  }
+});
+
+// API endpoint to get user's created events with RSVPs
+app.get("/api/user-events", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const userId = req.session.user.id;
+
+    // Get all events created by this user with RSVP details
+    const events = await db.any(
+      `
+      SELECT
+        ce.id,
+        ce.title,
+        ce.location,
+        ce.start_time,
+        ce.end_time,
+        ce.description,
+        ce.image_url,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'rsvp_id', r.rsvp_id,
+              'name', r.name,
+              'email', r.email,
+              'guests', r.guests,
+              'notes', r.notes,
+              'submitted_at', r.submitted_at
+            )
+          ) FILTER (WHERE r.rsvp_id IS NOT NULL),
+          '[]'
+        ) as rsvps
+      FROM custom_events ce
+      LEFT JOIN rsvps r ON CAST(ce.id AS VARCHAR) = r.event_id
+      WHERE ce.organizer_id = $1
+      GROUP BY ce.id, ce.title, ce.location, ce.start_time, ce.end_time, ce.description, ce.image_url
+      ORDER BY ce.start_time DESC
+    `,
+      [userId],
+    );
+
+    res.json({ events });
+  } catch (error) {
+    console.error("Error fetching user events:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching events", error: error.message });
+  }
+});
+
+app.get("/profile", async (req, res) => {
   // 🔐 Require login, same as /feed
   if (!req.session.user) {
     return res.redirect("/login");
   }
 
-  const user = req.session.user; // this is what you set on login
+  try {
+    const user = req.session.user;
+    const userId = user.id;
 
-  res.render("pages/profile", {
-    layout: "main",
-    title: "User Profile",
-    username: user.name || "Guest",   // or user.username if you have that column
-    email: user.email || "N/A",
-  });
+    // Get all RSVPs for this user
+    const userRsvps = await db.any(
+      `
+      SELECT
+        r.rsvp_id,
+        r.event_id,
+        r.guests,
+        r.notes,
+        r.submitted_at,
+        COALESCE(ce.title, r.event_name) as event_title,
+        COALESCE(ce.location, r.event_location) as event_location,
+        COALESCE(ce.start_time, r.event_date) as event_start_time,
+        ce.end_time as event_end_time,
+        ce.image_url as event_image_url
+      FROM rsvps r
+      LEFT JOIN custom_events ce ON r.event_id = CAST(ce.id AS VARCHAR)
+      WHERE r.user_id = $1
+      ORDER BY r.submitted_at DESC
+    `,
+      [userId],
+    );
+
+    // Get all events created by this user with RSVP details
+    const userEvents = await db.any(
+      `
+      SELECT
+        ce.id,
+        ce.title,
+        ce.location,
+        ce.start_time,
+        ce.end_time,
+        ce.description,
+        ce.image_url,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'rsvp_id', r.rsvp_id,
+              'name', r.name,
+              'email', r.email,
+              'guests', r.guests,
+              'notes', r.notes,
+              'submitted_at', r.submitted_at
+            )
+          ) FILTER (WHERE r.rsvp_id IS NOT NULL),
+          '[]'
+        ) as rsvps
+      FROM custom_events ce
+      LEFT JOIN rsvps r ON CAST(ce.id AS VARCHAR) = r.event_id
+      WHERE ce.organizer_id = $1
+      GROUP BY ce.id, ce.title, ce.location, ce.start_time, ce.end_time, ce.description, ce.image_url
+      ORDER BY ce.start_time DESC
+    `,
+      [userId],
+    );
+
+    res.render("pages/profile", {
+      layout: "main",
+      title: "User Profile",
+      username: user.name || "Guest",
+      email: user.email || "N/A",
+      userRsvps: userRsvps,
+      userEvents: userEvents,
+    });
+  } catch (error) {
+    console.error("Error loading profile:", error);
+    res.render("pages/profile", {
+      layout: "main",
+      title: "User Profile",
+      username: req.session.user.name || "Guest",
+      email: req.session.user.email || "N/A",
+      userRsvps: [],
+      userEvents: [],
+      error: "Error loading profile data",
+    });
+  }
 });
 
 module.exports = app.listen(3000);

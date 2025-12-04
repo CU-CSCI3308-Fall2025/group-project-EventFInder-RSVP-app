@@ -10,6 +10,18 @@ chai.should();
 chai.use(chaiHttp);
 const { assert, expect } = chai;
 
+// ********************** Database Connection for Cleanup ********************
+
+const pgp = require("pg-promise")();
+const dbConfig = {
+  host: process.env.POSTGRES_HOST,
+  port: 5432,
+  database: process.env.POSTGRES_DB,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
+};
+const db = pgp(dbConfig);
+
 // ********************** DEFAULT WELCOME TESTCASE ****************************
 
 describe("Server!", () => {
@@ -30,15 +42,32 @@ describe("Server!", () => {
 // *********************** REGISTER ENDPOINT TESTCASES **************************
 
 describe("Register User", () => {
+  const registeredUsers = [];
+
+  // Clean up all successfully registered test users after all tests
+  after(async () => {
+    try {
+      for (const email of registeredUsers) {
+        await db.none("DELETE FROM users WHERE email = $1", [email]);
+        console.log(`Cleaned up registered test user: ${email}`);
+      }
+    } catch (error) {
+      console.error("Error during Register test cleanup:", error);
+    }
+  });
+
   // Positive test case - successful registration
   it("Positive: /register - Should register a new user successfully", (done) => {
     const timestamp = Date.now();
+    const testEmail = `testuser${timestamp}@example.com`;
+    registeredUsers.push(testEmail); // Track for cleanup
+
     chai
       .request(server)
       .post("/api/register")
       .send({
         name: "Test User",
-        email: `testuser${timestamp}@example.com`,
+        email: testEmail,
         password: "password123",
       })
       .end((err, res) => {
@@ -161,6 +190,17 @@ describe("Feed Page Tests", () => {
       console.log("Session cookie obtained:", sessionCookie);
     } else {
       console.log("No session cookie found in login response");
+    }
+  });
+
+  // Clean up test user after all tests
+  after(async () => {
+    try {
+      // Clean up the test user
+      await db.none("DELETE FROM users WHERE email = $1", [testUser.email]);
+      console.log(`Cleaned up test user: ${testUser.email}`);
+    } catch (error) {
+      console.error("Error during Feed test cleanup:", error);
     }
   });
 
@@ -507,6 +547,33 @@ describe("Create Event", () => {
     // Extract session cookie from login response
     if (loginRes.headers["set-cookie"]) {
       sessionCookie = loginRes.headers["set-cookie"];
+    }
+  });
+
+  // Clean up all events created by test user after all tests
+  after(async () => {
+    try {
+      // Get the test user's ID
+      const user = await db.oneOrNone("SELECT id FROM users WHERE email = $1", [
+        testUser.email,
+      ]);
+
+      if (user) {
+        // Delete all events created by this test user
+        const deletedEvents = await db.result(
+          "DELETE FROM custom_events WHERE organizer_id = $1",
+          [user.id],
+        );
+        console.log(
+          `Cleaned up ${deletedEvents.rowCount} test events for user: ${testUser.email}`,
+        );
+
+        // Also clean up the test user
+        await db.none("DELETE FROM users WHERE id = $1", [user.id]);
+        console.log(`Cleaned up test user: ${testUser.email}`);
+      }
+    } catch (error) {
+      console.error("Error during test cleanup:", error);
     }
   });
 

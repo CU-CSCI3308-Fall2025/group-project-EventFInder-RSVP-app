@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS custom_events (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     organizer_id INTEGER REFERENCES users(id) NOT NULL,
+    image_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,6 +25,20 @@ CREATE TABLE IF NOT EXISTS user_rsvp (
     user_id INTEGER REFERENCES users(id) NOT NULL,
     event_id INTEGER REFERENCES custom_events(id) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rsvps (
+    rsvp_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    event_id VARCHAR(255),
+    event_name VARCHAR(255),
+    event_location VARCHAR(255),
+    event_date TIMESTAMP,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    guests INTEGER DEFAULT 1 CHECK (guests > 0),
+    notes TEXT,
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 INSERT INTO users (name, email, password) VALUES
@@ -35,14 +50,15 @@ INSERT INTO users (name, email, password) VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample events
-INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id) VALUES
+INSERT INTO custom_events (title, description, location, start_time, end_time, organizer_id, image_url) VALUES
 (
     'Tech Conference 2024',
     'Join us for the biggest tech conference of the year! Featuring keynote speakers from leading tech companies, workshops on cutting-edge technologies, and networking opportunities with industry professionals.',
     'Convention Center, Downtown',
     '2024-06-15 09:00:00',
     '2024-06-15 18:00:00',
-    1
+    1,
+    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800'
 ),
 (
     'Summer Music Festival',
@@ -50,7 +66,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Central Park Amphitheater',
     '2024-07-20 14:00:00',
     '2024-07-20 23:00:00',
-    2
+    2,
+    'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800'
 ),
 (
     'Startup Pitch Night',
@@ -58,7 +75,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Innovation Hub, 5th Floor',
     '2024-05-10 18:30:00',
     '2024-05-10 21:30:00',
-    1
+    1,
+    'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=800'
 ),
 (
     'Community Food Drive',
@@ -66,7 +84,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Community Center, Main Street',
     '2024-05-25 10:00:00',
     '2024-05-25 15:00:00',
-    3
+    3,
+    'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800'
 ),
 (
     'Photography Workshop',
@@ -74,7 +93,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Art Studio Gallery, West End',
     '2024-06-05 13:00:00',
     '2024-06-05 17:00:00',
-    4
+    4,
+    'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800'
 ),
 (
     'Marathon Training Kickoff',
@@ -82,7 +102,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'City Sports Complex',
     '2024-05-18 07:00:00',
     '2024-05-18 09:00:00',
-    2
+    2,
+    'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=800'
 ),
 (
     'Book Club Meeting: Sci-Fi Edition',
@@ -90,7 +111,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Downtown Library, Reading Room',
     '2024-05-28 19:00:00',
     '2024-05-28 21:00:00',
-    5
+    5,
+    'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=800'
 ),
 (
     'Coding Bootcamp Open House',
@@ -98,7 +120,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Tech Education Center',
     '2024-06-01 10:00:00',
     '2024-06-01 14:00:00',
-    1
+    1,
+    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800'
 ),
 (
     'Farmers Market Opening Day',
@@ -106,7 +129,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Town Square',
     '2024-05-22 08:00:00',
     '2024-05-22 13:00:00',
-    3
+    3,
+    'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800'
 ),
 (
     'Virtual Reality Gaming Tournament',
@@ -114,7 +138,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'GameZone Arena',
     '2024-06-08 15:00:00',
     '2024-06-08 22:00:00',
-    4
+    4,
+    'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?w=800'
 ),
 (
     'Yoga in the Park',
@@ -122,7 +147,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Riverside Park, East Pavilion',
     '2024-05-20 08:00:00',
     '2024-05-20 09:30:00',
-    2
+    2,
+    'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=800'
 ),
 (
     'Career Fair 2024',
@@ -130,7 +156,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'University Conference Hall',
     '2024-06-12 11:00:00',
     '2024-06-12 16:00:00',
-    1
+    1,
+    'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800'
 ),
 (
     'Wine Tasting Evening',
@@ -138,7 +165,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Vineyard Restaurant & Bar',
     '2024-06-18 19:00:00',
     '2024-06-18 22:00:00',
-    5
+    5,
+    'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=800'
 ),
 (
     'Kids Science Fair',
@@ -146,7 +174,8 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Elementary School Gymnasium',
     '2024-05-30 14:00:00',
     '2024-05-30 17:00:00',
-    3
+    3,
+    'https://images.unsplash.com/photo-1567168539593-59673ababaae?w=800'
 ),
 (
     'Jazz Night at the Lounge',
@@ -154,5 +183,6 @@ INSERT INTO custom_events (title, description, location, start_time, end_time, o
     'Blue Note Lounge',
     '2024-06-22 20:00:00',
     '2024-06-22 23:30:00',
-    4
+    4,
+    'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=800'
 );

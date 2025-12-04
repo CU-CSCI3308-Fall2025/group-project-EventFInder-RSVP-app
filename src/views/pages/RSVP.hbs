@@ -66,11 +66,15 @@
   <p>Please fill out the form below to let us know if you can attend.</p>
 
   <form id="rsvp-form">
+    <input type="hidden" id="event_id" name="event_id" value="{{eventId}}">
+    <input type="hidden" id="event_name" name="event_name" value="{{eventName}}">
+    <input type="hidden" id="event_location" name="event_location" value="{{eventLocation}}">
+    <input type="hidden" id="event_date" name="event_date" value="{{eventDate}}">
     <label for="name">Full Name:</label>
-    <input type="text" id="name" name="name" required>
+    <input type="text" id="name" name="name" value="{{userName}}" readonly required style="background-color: #f0f0f0;">
 
     <label for="email">Email:</label>
-    <input type="email" id="email" name="email" required>
+    <input type="email" id="email" name="email" value="{{userEmail}}" readonly required style="background-color: #f0f0f0;">
 
     <label for="guests">Number of Guests:</label>
     <input type="number" id="guests" name="guests" min="1" max="10">
@@ -92,11 +96,34 @@
 document.getElementById("rsvp-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   //get data for entry from the passed data
+
+  // Convert event_date to proper ISO format for PostgreSQL
+  let eventDate = document.getElementById("event_date").value;
+  try {
+    if (eventDate) {
+      // If it's already a valid date string, convert to ISO format
+      const dateObj = new Date(eventDate);
+      if (!isNaN(dateObj.getTime())) {
+        eventDate = dateObj.toISOString();
+      } else {
+        eventDate = null;
+      }
+    } else {
+      eventDate = null;
+    }
+  } catch (e) {
+    eventDate = null;
+  }
+
   const data = {
     name: document.getElementById("name").value.trim(),
     email: document.getElementById("email").value.trim(),
     guests: document.getElementById("guests").value || 1,
-    notes: document.getElementById("notes").value.trim()
+    notes: document.getElementById("notes").value.trim(),
+    event_id: document.getElementById("event_id").value,
+    event_name: document.getElementById("event_name").value,
+    event_location: document.getElementById("event_location").value,
+    event_date: eventDate
   };
 
   try {
