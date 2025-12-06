@@ -1,9 +1,9 @@
-# Eventify - Local Event Finder & RSVP App
+# Event Finder - Local Event Finder & RSVP App
 
 ## Team Information
 - **Team Number:** 14-6
-- **Team Name:** Team Eventify
-- **Application Name:** Eventify
+- **Team Name:** Team Event Finder
+- **Application Name:** Event Finder
 
 ### Team Members
 - Abhiram Kasu
